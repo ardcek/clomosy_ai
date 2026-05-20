@@ -1,0 +1,82 @@
+unit talep_acma_module;
+
+interface
+
+uses
+  MainCode,
+  ticket_service,
+  domain_types;
+
+var
+  TxtBaslik    : TclEdit;
+  TxtAciklama  : TclMemo;
+  TxtKonum     : TclEdit;
+  CmbOncelik   : TclComboBox;
+  BtnOlustur   : TclButton;
+
+procedure FormCreate(Sender: TObject);
+procedure BtnOlusturClick(Sender: TObject);
+
+implementation
+
+procedure FormCreate(Sender: TObject);
+begin
+  if AktifRol <> ROLE_TALEP_ACAN then
+  begin
+    ShowMessage('Bu ekran sadece TalepAcan rolu icindir.');
+    GoRoleHome;
+    Exit;
+  end;
+
+  TxtBaslik := TclEdit.Create(MainForm);
+  TxtBaslik.Placeholder := 'Talep basligi';
+
+  TxtAciklama := TclMemo.Create(MainForm);
+  TxtAciklama.Text := '';
+
+  TxtKonum := TclEdit.Create(MainForm);
+  TxtKonum.Placeholder := 'Konum (Bina/Kat/Oda)';
+
+  CmbOncelik := TclComboBox.Create(MainForm);
+  CmbOncelik.AddItem('Dusuk');
+  CmbOncelik.AddItem('Orta');
+  CmbOncelik.AddItem('Yuksek');
+  CmbOncelik.AddItem('Kritik');
+  CmbOncelik.ItemIndex := 1;
+
+  BtnOlustur := TclButton.Create(MainForm);
+  BtnOlustur.Text := 'Talep Olustur';
+  BtnOlustur.OnClick := @BtnOlusturClick;
+end;
+
+procedure BtnOlusturClick(Sender: TObject);
+var
+  Resp : String;
+begin
+  if Trim(TxtBaslik.Text) = '' then
+  begin
+    ShowMessage('Baslik zorunludur.');
+    Exit;
+  end;
+
+  Resp := CreateTicket(
+    AktifAuthToken,
+    TxtBaslik.Text,
+    TxtAciklama.Text,
+    TxtKonum.Text,
+    CmbOncelik.Text
+  );
+
+  if JsonGetString(Resp, 'id') = '' then
+  begin
+    ShowMessage('Talep olusturulamadi.');
+    Exit;
+  end;
+
+  ShowMessage('Talep basariyla olusturuldu: ' + JsonGetString(Resp, 'ticketNo'));
+  TxtBaslik.Text := '';
+  TxtAciklama.Text := '';
+  TxtKonum.Text := '';
+end;
+
+end.

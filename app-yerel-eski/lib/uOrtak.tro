@@ -1,0 +1,95 @@
+// =============================================================================
+// uOrtak.tro
+// -----------------------------------------------------------------------------
+// PAYLASIMLI KOD KUTUPHANESI (snippet, IDE'ye YUKLENMEZ).
+//
+// Bu birim Clomosy IDE'ye yuklenmez. Icindeki bolumler, runnable birimlerin
+// (MainCode, uRolSecim, uTalepAcma, uYoneticiAtama, uSahaPersoneli) basina
+// kopya yapilarak kullanilir.
+//
+// Stil: Resmi {} stili (docs.clomosy.com).
+//   - "=" atama, "==" karsilastirma, "<>" esit-degil
+//   - void <Ad>;        prosedur tanimi
+//   - function <Ad> : <Tip>;  fonksiyon tanimi (parantezsiz)
+//   - void <Ad>(p1:Tip; p2:Tip);  parametreli prosedur
+//   - "Result = ..." ile fonksiyon donus degeri
+//
+// Iceindekiler:
+//   [SABITLER]  Roller, durumlar, oncelikler, App parametre anahtarlari
+//   [HELPERS]   GUID, JSON escape, ISO tarih, SLA
+// =============================================================================
+
+
+// ============================ [SABITLER] =====================================
+
+const
+  ROL_TALEP_ACAN        = 'TalepAcan';
+  ROL_YONETICI          = 'Yonetici';
+  ROL_SAHA              = 'SahaPersoneli';
+
+  DURUM_ACIK            = 'Acik';
+  DURUM_ATANDI          = 'Atandi';
+  DURUM_YOLDA           = 'Yolda';
+  DURUM_ISLEMDE         = 'Islemde';
+  DURUM_BEKLEMEDE       = 'Beklemede';
+  DURUM_TAMAMLANDI      = 'Tamamlandi';
+
+  ONC_KRITIK            = 'Kritik';
+  ONC_YUKSEK            = 'Yuksek';
+  ONC_ORTA              = 'Orta';
+  ONC_DUSUK             = 'Dusuk';
+
+  PRM_AKTIF_ROL         = 'AktifRol';
+  PRM_AKTIF_KULL_GUID   = 'AktifKullaniciGuid';
+  PRM_AKTIF_KULL_AD     = 'AktifKullaniciAd';
+
+  DB_DOSYA              = 'arzpf.db';
+
+
+// ============================ [HELPERS] ======================================
+
+// Yeni bir benzersiz kod uretir. Clomosy.NewGUID varsa onu kullan; yoksa
+// zaman damgasi + rastgele takisi ile guvenli bir alternatif.
+function YeniGuid : String;
+var s : String;
+{
+  s = Clomosy.NewGUID;
+  if (s == '')
+  {
+    s = 'ID-' + IntToStr(DateTimeToUnix(Now)) + '-' + IntToStr(Random(1000000));
+  }
+  Result = s;
+}
+
+// ISO-8601 formatinda simdi.
+function NowIso : String;
+{
+  Result = FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', Now);
+}
+
+// ISO-8601 formatinda simdi + Saat eklenmis tarih.
+function IsoPlusHours(Saat : Integer) : String;
+{
+  Result = FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', Now + Saat / 24.0);
+}
+
+// Oncelik adina gore SLA saatlerini doner. (Kritik=2, Yuksek=4, Orta=8, Dusuk=24)
+function OncelikSaat(Oncelik : String) : Integer;
+{
+  if (Oncelik == 'Kritik')
+  {
+    Result = 2;
+  }
+  else if (Oncelik == 'Yuksek')
+  {
+    Result = 4;
+  }
+  else if (Oncelik == 'Dusuk')
+  {
+    Result = 24;
+  }
+  else
+  {
+    Result = 8;
+  }
+}

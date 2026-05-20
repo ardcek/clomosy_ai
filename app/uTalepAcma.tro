@@ -1,0 +1,1362 @@
+// =============================================================================
+// uTalepAcma.tro  -  TALEP ACAN EKRANI
+// -----------------------------------------------------------------------------
+// AKIS:
+//   - Yeni talep formu: baslik, aciklama, konum, oncelik (Kritik/Yuksek/Orta/Dusuk)
+//   - "Talep Olustur" -> RTDB POST /tickets.json  (auto-key uretilir)
+//   - "Yenile" -> RTDB GET /tickets.json?orderBy="talepAcanId"&equalTo="<uid>"
+//   - Liste TclProListView + arama filtresi
+//   - "Cikis" -> token ve rol temizlenir, uLogin'e doner.
+//
+// SLA: Oncelige gore deadline istemcide hesaplanir:
+//   Kritik=2h, Yuksek=8h, Orta=24h, Dusuk=72h
+// =============================================================================
+
+
+// ============================== [TASARIM TOKEN] ==============================
+// uYoneticiAtama.tro / uSahaPersoneli.tro ile ayni palet
+
+const
+  C_SURFACE     = '#F8FAFC';
+  C_CARD        = '#FFFFFF';
+  C_INSET       = '#F1F5F9';
+  C_BORDER      = '#E2E8F0';
+  C_PRIMARY     = '#2563EB';
+  C_PRIMARY_BG  = '#EFF6FF';
+  C_DANGER      = '#EF4444';
+  C_DANGER_BG   = '#FEF2F2';
+  C_SUCCESS     = '#10B981';
+  C_TEXT        = '#0F172A';
+  C_MUTED       = '#64748B';
+  C_ON_SOLID    = '#FFFFFF';
+  C_HEADER_BAR  = '#EFF6FF';
+  C_MUTED_BG    = '#EEF2FF';
+  C_BODY_END    = '#E8EDF5';
+  C_BREAK_NARROW = 760;
+  C_SAFE_BOTTOM  = 40;
+
+
+// ============================== [GLOBAL VAR] =================================
+
+var
+  FormTA       : TclForm;
+  PnlHeader    : TclProPanel;
+  LblBaslik    : TclProLabel;
+  LblKullanici : TclProLabel;
+  BtnCikis     : TclProButton;
+  PnlHeadSep   : TclProPanel;
+  VScroll      : TclVertScrollBox;
+  PnlBody      : TclProPanel;
+
+  PnlKartForm  : TclProPanel;
+  LblFormEyebrow : TclProLabel;
+  LblFormBaslik : TclProLabel;
+  LblOncelikEtik : TclProLabel;
+  CmbOncelik   : TClComboBox;
+  EdtTalepBaslik: TclProEdit;
+  EdtAciklama  : TclProEdit;
+  EdtKonum     : TclProEdit;
+  BtnOlustur   : TclProButton;
+  LblForumMsg  : TclProLabel;
+
+  PnlKartListe : TclProPanel;
+  LblListeEyebrow : TclProLabel;
+  PnlListeTitleRow : TclProPanel;
+  LblListeBaslik : TclProLabel;
+  LblTalepCount : TclProLabel;
+  PnlSolToolbar : TclProPanel;
+  PnlToolPrefix : TclProPanel;
+  BtnYenile    : TclProButton;
+  EdtTalepAra  : TClProEdit;
+  PnlAraSutun  : TclProPanel;
+  BtnTalepAra  : TclProButton;
+  PnlListHost  : TclProPanel;
+  LbTalepler   : TclProListView;
+  LvDesigner   : TClProListViewDesignerPanel;
+  LvLMain      : TclProLabel;
+  LvLSub       : TclProLabel;
+  LvLFoot      : TclProLabel;
+  PnlEmptyState : TclProPanel;
+  PnlEmptyCenter : TclProPanel;
+  ImgEmpty     : TclProImage;
+  LblEmptyTitle : TclProLabel;
+  LblEmptySub  : TclProLabel;
+
+  LastTalepimJson : String;
+  IlkTalepListeKaldi : Integer;
+  Adim         : String;
+  TmrYerlesim  : TClTimer;
+
+
+// ============================ [SNIPPET: uRtdb] ===============================
+
+// ============================ [SNIPPET: Session] =============================
+// Clomosy.GlobalVariableString TEK scalar slot. Coklu key icin pipe ayrim:
+//   |Token=...|UserId=...|AdSoyad=...|
+
+function SessionGet(key : String) : String;
+var
+  s, marker, rest : String;
+{
+  s = Clomosy.GlobalVariableString;
+  marker = '|' + key + '=';
+  if (Pos(marker, s) > 0)
+  {
+    rest = clGetStringAfter(s, marker);
+    Result = clGetStringTo(rest, '|');
+  }
+  else
+  {
+    Result = '';
+  }
+}
+
+void SessionSet(key : String; value : String);
+var
+  s, marker, before, rest, after : String;
+{
+  s = Clomosy.GlobalVariableString;
+  if (s == '')
+  {
+    s = '|';
+  }
+  if (Copy(s, 1, 1) <> '|')
+  {
+    s = '|' + s;
+  }
+  if (Copy(s, Length(s), 1) <> '|')
+  {
+    s = s + '|';
+  }
+
+  marker = '|' + key + '=';
+  if (Pos(marker, s) > 0)
+  {
+    before = clGetStringTo(s, marker);
+    rest   = clGetStringAfter(s, marker);
+    after  = clGetStringAfter(rest, '|');
+    s = before + marker + value + '|' + after;
+  }
+  else
+  {
+    s = s + key + '=' + value + '|';
+  }
+
+  Clomosy.GlobalVariableString = s;
+}
+
+void SessionClear;
+{
+  Clomosy.GlobalVariableString = '';
+}
+
+
+function DbUrl : String;
+var u : String;
+{
+  u = SessionGet('DbUrl');
+  if (u == '')
+  {
+    Result = 'https://akilli-ariza-saha-default-rtdb.europe-west1.firebasedatabase.app';
+  }
+  else
+  {
+    Result = u;
+  }
+}
+
+function Token : String;
+{
+  Result = SessionGet('Token');
+}
+
+function AuthQuery : String;
+{
+  Result = 'auth=' + Token;
+}
+
+function RtdbUrl(Path : String; ExtraQuery : String) : String;
+var q : String;
+{
+  q = AuthQuery;
+  if (ExtraQuery <> '')
+  {
+    q = q + '&' + ExtraQuery;
+  }
+  Result = DbUrl + '/' + Path + '.json?' + q;
+}
+
+function JsonEsc(S : String) : String;
+var R : String;
+{
+  R = clGetStringReplace(S, '\', '\\');
+  R = clGetStringReplace(R, '"', '\"');
+  R = clGetStringReplace(R, Chr(13), '');
+  R = clGetStringReplace(R, Chr(10), ' ');
+  Result = R;
+}
+
+function RtdbGet(Path : String; Query : String) : String;
+var
+  R   : TclRest;
+  url : String;
+{
+  url = RtdbUrl(Path, Query);
+  SessionSet('LastReqUrl', url);
+  R = TclRest.Create;
+  try
+    R.BaseURL = url;
+    R.Method  = rmGET;
+    R.Accept  = 'application/json';
+    R.Execute;
+    Result = R.Response;
+  finally
+    R.Free;
+  }
+}
+
+function RtdbPost(Path : String; BodyJson : String) : String;
+var R : TclRest;
+{
+  R = TclRest.Create;
+  try
+    R.BaseURL     = RtdbUrl(Path, '');
+    R.Method      = rmPOST;
+    R.Accept      = 'application/json';
+    R.ContentType = 'application/json';
+    R.Body        = BodyJson;
+    R.Execute;
+    Result = R.Response;
+  finally
+    R.Free;
+  }
+}
+
+function JsonStrAlan(Json : String; Alan : String) : String;
+var
+  marker : String;
+  s      : String;
+{
+  marker = '"' + Alan + '"';
+  if (Pos(marker, Json) == 0)
+  {
+    Result = '';
+  }
+  else
+  {
+    s = clGetStringAfter(Json, marker);
+    s = clGetStringAfter(s, ':');
+    s = clGetStringAfter(s, '"');
+    Result = clGetStringTo(s, '"');
+  }
+}
+
+function RtdbPostKeyOku(PostResp : String) : String;
+{
+  Result = JsonStrAlan(PostResp, 'name');
+}
+
+
+// ============================ [SLA HESAPLA] ==================================
+
+function SlaSaatler(Oncelik : String) : Integer;
+{
+  if (Oncelik == 'Kritik')      { Result = 2;  }
+  else if (Oncelik == 'Yuksek') { Result = 8;  }
+  else if (Oncelik == 'Orta')   { Result = 24; }
+  else                          { Result = 72; }
+}
+
+function SlaDeadline(Oncelik : String) : String;
+var saat : Integer;
+{
+  saat = SlaSaatler(Oncelik);
+  Result = FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now + (saat / 24));
+}
+
+function NowIso : String;
+{
+  Result = FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now);
+}
+
+function TicketNoUret : String;
+var d : String;
+{
+  d = FormatDateTime('yymmddhhnnss', Now);
+  Result = 'ARZ-' + d;
+}
+
+
+function IMin(a, b : Integer) : Integer;
+{
+  if (a < b)
+  {
+    Result = a;
+  }
+  else
+  {
+    Result = b;
+  }
+}
+
+function IMax(a, b : Integer) : Integer;
+{
+  if (a > b)
+  {
+    Result = a;
+  }
+  else
+  {
+    Result = b;
+  }
+}
+
+
+// =========================== [LISTE] =========================================
+// RTDB GET: {"-Nxxx":{"ticketNo":"...",...},...}
+// ProListView: MAIN_TEXT ilk (clCaption baglantisinda bazi surumler ilk kolonu kullanir); RECORD_GUID son.
+
+void TaleplerimListeGorunum(listeDolu : Boolean);
+{
+  if (listeDolu)
+  {
+    LbTalepler.Visible = True;
+    PnlEmptyState.Visible = False;
+    LbTalepler.BringToFront;
+  }
+  else
+  {
+    LbTalepler.Visible = False;
+    PnlEmptyState.Visible = True;
+  }
+}
+
+void TaleplerimListeDesignerRenkYenile;
+{
+  if (LvDesigner <> nil)
+  {
+    LvDesigner.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+  }
+  if (LvLMain <> nil)
+  {
+    LvLMain.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LvLMain.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LvLMain.clProSettings.IsTransparent = False;
+    LvLMain.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLMain.SetclProSettings(LvLMain.clProSettings);
+  }
+  if (LvLSub <> nil)
+  {
+    LvLSub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLSub.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLSub.clProSettings.IsTransparent = False;
+    LvLSub.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLSub.SetclProSettings(LvLSub.clProSettings);
+  }
+  if (LvLFoot <> nil)
+  {
+    LvLFoot.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLFoot.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLFoot.clProSettings.IsTransparent = False;
+    LvLFoot.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLFoot.SetclProSettings(LvLFoot.clProSettings);
+  }
+}
+
+void TaleplerimListesiYukle(json : String; filtre : String);
+var
+  rem, key, blok : String;
+  baslangic, adet : Integer;
+  ticketNo, baslik, durum : String;
+  konum, oncelik, createdAt, footerSaat : String;
+  arr : String;
+  hay : String;
+  ned : String;
+  ilk : Boolean;
+  gec : Boolean;
+  depth, idx : Integer;
+  ch : String;
+  inStr, esc : Boolean;
+{
+  arr = '[';
+  ilk = True;
+  adet = 0;
+  ned = Trim(filtre);
+
+  if ((json == '') || (json == 'null') || (json == '{}'))
+  {
+    LbTalepler.ClearList;
+    TaleplerimListeGorunum(False);
+    LblTalepCount.Text = '0 talep';
+    LblEmptyTitle.Text = 'Henuz talebiniz yok';
+    LblEmptySub.Text =
+      'Yenile ile listeyi guncelleyin. Arama kutusu ile filtreleyebilirsiniz.';
+    LblEmptyTitle.SetclProSettings(LblEmptyTitle.clProSettings);
+    LblEmptySub.SetclProSettings(LblEmptySub.clProSettings);
+    Exit;
+  }
+
+  rem = json;
+  while (Pos('":{', rem) > 0)
+  {
+    baslangic = Pos('"', rem);
+    if (baslangic == 0) { break; }
+    rem = Copy(rem, baslangic + 1, Length(rem));
+
+    key = clGetStringTo(rem, '":{');
+    rem = clGetStringAfter(rem, '":{');
+
+    depth = 1;
+    idx   = 1;
+    inStr = False;
+    esc   = False;
+    while ((idx <= Length(rem)) && (depth > 0))
+    {
+      ch = Copy(rem, idx, 1);
+      if (esc == True)
+      {
+        esc = False;
+      }
+      else if (ch == Chr(92))
+      {
+        esc = True;
+      }
+      else if (ch == '"')
+      {
+        inStr = (inStr == False);
+      }
+      else if (inStr == False)
+      {
+        if      (ch == '{') { depth = depth + 1; }
+        else if (ch == '}') { depth = depth - 1; }
+      }
+      idx = idx + 1;
+    }
+    blok = Copy(rem, 1, idx - 2);
+    rem  = Copy(rem, idx, Length(rem));
+
+    ticketNo  = JsonStrAlan('{' + blok + '}', 'ticketNo');
+    baslik    = JsonStrAlan('{' + blok + '}', 'baslik');
+    durum     = JsonStrAlan('{' + blok + '}', 'durum');
+    konum     = JsonStrAlan('{' + blok + '}', 'konum');
+    oncelik   = JsonStrAlan('{' + blok + '}', 'oncelik');
+    createdAt = JsonStrAlan('{' + blok + '}', 'createdAt');
+
+    gec = True;
+    if (ned <> '')
+    {
+      hay = AnsiLowerCase(ticketNo + ' ' + baslik + ' ' + konum + ' ' + oncelik + ' ' + durum);
+      if (Pos(AnsiLowerCase(ned), hay) == 0)
+      {
+        gec = False;
+      }
+    }
+    if (gec == True)
+    {
+      if (Length(createdAt) >= 16)
+      {
+        footerSaat = Copy(createdAt, 12, 5);
+      }
+      else if (createdAt <> '')
+      {
+        footerSaat = createdAt;
+      }
+      else
+      {
+        footerSaat = '--:--';
+      }
+
+      if (ilk == False) { arr = arr + ','; }
+      arr = arr + '{"MAIN_TEXT":"' + JsonEsc(ticketNo + ' - ' + baslik) + '",' +
+        '"SUB_TEXT":"' + JsonEsc(konum + '  |  ' + oncelik + '  |  ' + durum) + '",' +
+        '"FOOTER_TEXT":"' + JsonEsc('Olusturuldu: ' + footerSaat) + '",' +
+        '"RECORD_GUID":"' + key + '"}';
+      ilk = False;
+      adet = adet + 1;
+    }
+  }
+
+  if (ilk == False)
+  {
+    arr = arr + ']';
+    LbTalepler.clLoadProListViewDataFromDataset(Clomosy.ClDataSetFromJSON(arr));
+    TaleplerimListeGorunum(True);
+    TaleplerimListeDesignerRenkYenile;
+    LbTalepler.SetclProSettings(LbTalepler.clProSettings);
+    LblTalepCount.Text = IntToStr(adet) + ' talep';
+  }
+  else
+  {
+    LbTalepler.ClearList;
+    TaleplerimListeGorunum(False);
+    LblTalepCount.Text = '0 talep';
+    if (ned <> '')
+    {
+      LblEmptyTitle.Text = 'Aramaya uygun sonuc yok';
+      LblEmptySub.Text =
+        'Arama metnini temizleyin veya Yenile ile tum listeyi gorun.';
+    }
+    else
+    {
+      LblEmptyTitle.Text = 'Henuz talebiniz yok';
+      LblEmptySub.Text =
+        'Yenile ile listeyi guncelleyin. Arama kutusu ile filtreleyebilirsiniz.';
+    }
+    LblEmptyTitle.SetclProSettings(LblEmptyTitle.clProSettings);
+    LblEmptySub.SetclProSettings(LblEmptySub.clProSettings);
+  }
+}
+
+
+void YerlesimLayoutIste;
+{
+  if (TmrYerlesim <> nil)
+  {
+    TmrYerlesim.Enabled = True;
+  }
+}
+
+void TalepAramaDegisti;
+{
+  if (LastTalepimJson == '')
+  {
+    Exit;
+  }
+  TaleplerimListesiYukle(LastTalepimJson, Trim(EdtTalepAra.Text));
+  YerlesimLayoutIste;
+}
+
+
+void LblForumMsgBoslukAyarla;
+{
+  if (Trim(LblForumMsg.Text) == '')
+  {
+    LblForumMsg.Visible = False;
+    LblForumMsg.Height = 0;
+    LblForumMsg.Margins.Top = 0;
+    LblForumMsg.Margins.Bottom = 0;
+  }
+  else
+  {
+    LblForumMsg.Visible = True;
+    LblForumMsg.Height = 44;
+    LblForumMsg.Margins.Top = 10;
+    LblForumMsg.Margins.Bottom = 12;
+    LblForumMsg.clProSettings.WordWrap = True;
+    LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+  }
+}
+
+
+void UygulaResponsiveTalepAcma;
+var
+  rawW    : Integer;
+  narrow  : Boolean;
+  sideM   : Integer;
+  innerW  : Integer;
+  listH   : Integer;
+  kartL   : Integer;
+  formK   : Integer;
+  bodyH   : Integer;
+{
+  rawW = FormTA.clWidth;
+  narrow = (rawW > 250) && (rawW < C_BREAK_NARROW);
+
+  if (narrow)
+  {
+    sideM = 8;
+    PnlBody.Margins.Left   = sideM;
+    PnlBody.Margins.Right  = sideM;
+    PnlBody.Margins.Top    = 8;
+    PnlBody.Margins.Bottom = 8;
+  }
+  else
+  {
+    sideM = 12;
+    PnlBody.Margins.Left   = sideM;
+    PnlBody.Margins.Right  = sideM;
+    PnlBody.Margins.Top    = 12;
+    PnlBody.Margins.Bottom = 12;
+  }
+
+  innerW = rawW - PnlBody.Margins.Left - PnlBody.Margins.Right;
+  innerW = IMax(innerW, 280);
+
+  LblBaslik.Width = IMin(220, IMax(160, innerW div 2));
+
+  if (narrow)
+  {
+    BtnCikis.Width = 72;
+  }
+  else
+  {
+    BtnCikis.Width = 80;
+  }
+
+  listH = Round(FormTA.clHeight * 0.33);
+  listH = IMax(listH, 228);
+  listH = IMin(listH, 392);
+  PnlListHost.Height = listH;
+
+  kartL = 172 + listH + 20;
+  PnlKartListe.Height = kartL;
+
+  LblForumMsgBoslukAyarla;
+  formK = 458;
+  if (Trim(LblForumMsg.Text) <> '')
+  {
+    formK = 512;
+  }
+  PnlKartForm.Height = formK;
+
+  bodyH = formK + 12 + kartL + PnlBody.Margins.Top + PnlBody.Margins.Bottom + C_SAFE_BOTTOM + 16;
+  bodyH = IMax(bodyH, FormTA.clHeight - 58 + C_SAFE_BOTTOM);
+  bodyH = IMax(bodyH, 640);
+  PnlBody.Height = bodyH;
+
+  PnlSolToolbar.Height = 54;
+  if (innerW < 340)
+  {
+    PnlToolPrefix.Width = 72;
+  }
+  else
+  {
+    PnlToolPrefix.Width = 104;
+  }
+
+  if (innerW < 340)
+  {
+    EdtTalepAra.clProSettings.FontSize = 11;
+    EdtTalepAra.SetclProSettings(EdtTalepAra.clProSettings);
+    EdtTalepAra.TextPrompt = 'Numara, baslik veya konum';
+    BtnTalepAra.clProSettings.FontSize = 11;
+    BtnTalepAra.SetclProSettings(BtnTalepAra.clProSettings);
+  }
+  else
+  {
+    EdtTalepAra.clProSettings.FontSize = 13;
+    EdtTalepAra.SetclProSettings(EdtTalepAra.clProSettings);
+    EdtTalepAra.TextPrompt = 'Numara, baslik veya konum';
+    BtnTalepAra.clProSettings.FontSize = 12;
+    BtnTalepAra.SetclProSettings(BtnTalepAra.clProSettings);
+  }
+
+  if (LvDesigner <> nil)
+  {
+    LvDesigner.Width = IMax(200, innerW - 64);
+    LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+  }
+  TaleplerimListeDesignerRenkYenile;
+}
+
+
+// =========================== [EVENT HANDLERS] ================================
+
+void ListeyiYenile;
+var
+  uid  : String;
+  json : String;
+{
+  uid = SessionGet('UserId');
+  if (uid == '')
+  {
+    ShowMessage('Oturum yok, lutfen tekrar giris yapin');
+    Clomosy.RunUnit('uLogin');
+    FormTA.clHide;
+  }
+  else
+  {
+    try
+      json = RtdbGet('tickets', 'orderBy="talepAcanId"&equalTo="' + uid + '"');
+      SessionSet('LastReqResp', json);
+      LastTalepimJson = json;
+      try
+        TaleplerimListesiYukle(json, Trim(EdtTalepAra.Text));
+      except
+        LastTalepimJson = '';
+        LbTalepler.ClearList;
+        TaleplerimListeGorunum(False);
+        LblTalepCount.Text = '0 talep';
+        LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+        LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+        LblForumMsg.Text = 'Liste hatasi: ' + LastExceptionMessage;
+      }
+    except
+      LastTalepimJson = '';
+      LbTalepler.ClearList;
+      TaleplerimListeGorunum(False);
+      LblTalepCount.Text = '0 talep';
+      LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+      LblForumMsg.Text = 'Listeleme (RTDB): ' + LastExceptionMessage;
+    }
+  }
+  LblForumMsgBoslukAyarla;
+  YerlesimLayoutIste;
+}
+
+
+void ListeyiYenileBaslat;
+{
+  LblForumMsg.Text = '';
+  LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+  LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+  LblForumMsgBoslukAyarla;
+  ListeyiYenile;
+}
+
+
+void YerlesimLayoutTick;
+{
+  UygulaResponsiveTalepAcma;
+  if (IlkTalepListeKaldi <> 0)
+  {
+    IlkTalepListeKaldi = 0;
+    ListeyiYenile;
+  }
+  TmrYerlesim.Enabled = False;
+}
+
+
+void OlusturClick;
+var
+  uid      : String;
+  baslik   : String;
+  aciklama : String;
+  konum    : String;
+  oncelik  : String;
+  ticketNo : String;
+  now_     : String;
+  sla      : String;
+  body     : String;
+  resp     : String;
+  newKey   : String;
+  ev       : String;
+{
+  LblForumMsg.Text = '';
+  LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+  LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+  LblForumMsgBoslukAyarla;
+
+  baslik   = Trim(EdtTalepBaslik.Text);
+  aciklama = Trim(EdtAciklama.Text);
+  konum    = Trim(EdtKonum.Text);
+  oncelik  = CmbOncelik.GetValueIndex(CmbOncelik.ItemIndex);
+
+  if ((baslik == '') || (konum == '') || (oncelik == ''))
+  {
+    LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+    LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+    LblForumMsg.Text = 'Baslik, konum ve oncelik zorunlu';
+  }
+  else
+  {
+    uid      = SessionGet('UserId');
+    ticketNo = TicketNoUret;
+    now_     = NowIso;
+    sla      = SlaDeadline(oncelik);
+
+    body = '{' +
+      '"ticketNo":"'         + JsonEsc(ticketNo) + '",' +
+      '"baslik":"'           + JsonEsc(baslik)   + '",' +
+      '"aciklama":"'         + JsonEsc(aciklama) + '",' +
+      '"konum":"'            + JsonEsc(konum)    + '",' +
+      '"oncelik":"'          + oncelik           + '",' +
+      '"durum":"Acik",' +
+      '"talepAcanId":"'      + uid               + '",' +
+      '"atananPersonelId":"",' +
+      '"createdAt":"'        + now_              + '",' +
+      '"updatedAt":"'        + now_              + '",' +
+      '"slaDeadline":"'      + sla               + '"' +
+    '}';
+
+    try
+      resp = RtdbPost('tickets', body);
+      newKey = RtdbPostKeyOku(resp);
+
+      if (newKey == '')
+      {
+        LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+        LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+        LblForumMsg.Text = 'Kayit basarisiz: ' + resp;
+      }
+      else
+      {
+        ev = '{' +
+          '"fromStatus":"",' +
+          '"toStatus":"Acik",' +
+          '"changedBy":"' + uid + '",' +
+          '"changedAt":"' + now_ + '",' +
+          '"note":"Talep olusturuldu"' +
+        '}';
+        RtdbPost('tickets/' + newKey + '/events', ev);
+
+        LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_SUCCESS);
+        LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+        LblForumMsg.Text = 'Talep olusturuldu: ' + ticketNo;
+        EdtTalepBaslik.Text = '';
+        EdtAciklama.Text    = '';
+        EdtKonum.Text       = '';
+        ListeyiYenile;
+      }
+    except
+      LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+      LblForumMsg.Text = 'Hata: ' + LastExceptionMessage;
+    }
+  }
+  LblForumMsgBoslukAyarla;
+  YerlesimLayoutIste;
+}
+
+
+void YenileClick;
+{
+  ListeyiYenileBaslat;
+}
+
+
+void CikisClick;
+{
+  SessionClear;
+  Clomosy.RunUnit('uLogin');
+  FormTA.clHide;
+}
+
+
+// ============================== [UI KURULUM] =================================
+
+{
+  try
+    Adim = '1: FormTA.Create';
+    FormTA = TclForm.Create(Self);
+    LastTalepimJson = '';
+    IlkTalepListeKaldi = 1;
+
+    Adim = '2: SetFormColor';
+    FormTA.SetFormColor(C_HEADER_BAR, C_BODY_END, clGVertical);
+    FormTA.clsetCaption('Talep Olustur');
+
+    Adim = '3: PnlHeader';
+    PnlHeader = FormTA.AddNewProPanel(FormTA, 'PnlHeader');
+    PnlHeader.Align  = alTop;
+    PnlHeader.Height = 56;
+    PnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_HEADER_BAR);
+    PnlHeader.SetclProSettings(PnlHeader.clProSettings);
+
+    LblBaslik = FormTA.AddNewProLabel(PnlHeader, 'LblBaslik', 'Talep Olustur');
+    LblBaslik.Align  = alLeft;
+    LblBaslik.Width  = 220;
+    LblBaslik.Margins.Left = 16;
+    LblBaslik.Margins.Top  = 12;
+    LblBaslik.clProSettings.FontSize = 17;
+    LblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LblBaslik.SetclProSettings(LblBaslik.clProSettings);
+
+    LblKullanici = FormTA.AddNewProLabel(PnlHeader, 'LblKullanici', '');
+    LblKullanici.Visible = False;
+    LblKullanici.Height = 0;
+    LblKullanici.Align = alClient;
+    LblKullanici.Margins.Right = 100;
+    LblKullanici.Margins.Top  = 14;
+    LblKullanici.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblKullanici.clProSettings.FontHorzAlign = palTrailing;
+    LblKullanici.SetclProSettings(LblKullanici.clProSettings);
+
+    BtnCikis = FormTA.AddNewProButton(PnlHeader, 'BtnCikis', 'Cikis');
+    BtnCikis.Align = alRight;
+    BtnCikis.Width = 80;
+    BtnCikis.Height = 36;
+    BtnCikis.Margins.Right = 12;
+    BtnCikis.Margins.Top = 6;
+    BtnCikis.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_DANGER_BG);
+    BtnCikis.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+    BtnCikis.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_DANGER);
+    BtnCikis.clProSettings.BorderWidth = 1;
+    BtnCikis.clProSettings.IsRound = True;
+    BtnCikis.clProSettings.RoundHeight = 8;
+    BtnCikis.clProSettings.RoundWidth = 8;
+    BtnCikis.SetclProSettings(BtnCikis.clProSettings);
+    FormTA.AddNewEvent(BtnCikis, tbeOnClick, 'CikisClick');
+
+    Adim = '4: PnlHeadSep';
+    PnlHeadSep = FormTA.AddNewProPanel(FormTA, 'PnlHeadSep');
+    PnlHeadSep.Align  = alTop;
+    PnlHeadSep.Height = 1;
+    PnlHeadSep.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlHeadSep.SetclProSettings(PnlHeadSep.clProSettings);
+
+    Adim = '5: VScroll';
+    VScroll = FormTA.AddNewVertScrollBox(FormTA, 'VScroll');
+    VScroll.Align = alClient;
+
+    Adim = '6: PnlBody';
+    PnlBody = FormTA.AddNewProPanel(VScroll, 'PnlBody');
+    PnlBody.Align = alTop;
+    PnlBody.Height = FormTA.clHeight - 70;
+    if (PnlBody.Height < 620)
+    {
+      PnlBody.Height = 620;
+    }
+    PnlBody.Margins.Left   = 12;
+    PnlBody.Margins.Right  = 12;
+    PnlBody.Margins.Top    = 12;
+    PnlBody.Margins.Bottom = 12;
+    PnlBody.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_SURFACE);
+    PnlBody.SetclProSettings(PnlBody.clProSettings);
+
+    // --- Yeni talep karti ----------------------------------------------------
+    Adim = '7: PnlKartForm';
+    PnlKartForm = FormTA.AddNewProPanel(PnlBody, 'PnlKartForm');
+    PnlKartForm.Align = alTop;
+    PnlKartForm.Height = 458;
+    PnlKartForm.Margins.Bottom = 12;
+    PnlKartForm.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlKartForm.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlKartForm.clProSettings.BorderWidth = 1;
+    PnlKartForm.clProSettings.IsRound = True;
+    PnlKartForm.clProSettings.RoundHeight = 12;
+    PnlKartForm.clProSettings.RoundWidth = 12;
+    PnlKartForm.SetclProSettings(PnlKartForm.clProSettings);
+
+    LblFormEyebrow = FormTA.AddNewProLabel(PnlKartForm, 'LblFormEyebrow', 'YENI TALEP');
+    LblFormEyebrow.Align = alTop;
+    LblFormEyebrow.Height = 18;
+    LblFormEyebrow.Margins.Top    = 16;
+    LblFormEyebrow.Margins.Left   = 16;
+    LblFormEyebrow.Margins.Right  = 16;
+    LblFormEyebrow.Margins.Bottom = 4;
+    LblFormEyebrow.clProSettings.FontSize = 12;
+    LblFormEyebrow.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblFormEyebrow.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblFormEyebrow.SetclProSettings(LblFormEyebrow.clProSettings);
+
+    LblFormBaslik = FormTA.AddNewProLabel(PnlKartForm, 'LblFormBaslik', 'Talep bilgileri');
+    LblFormBaslik.Align = alTop;
+    LblFormBaslik.Height = 26;
+    LblFormBaslik.Margins.Left   = 16;
+    LblFormBaslik.Margins.Right  = 16;
+    LblFormBaslik.Margins.Bottom = 10;
+    LblFormBaslik.clProSettings.FontSize = 16;
+    LblFormBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblFormBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LblFormBaslik.SetclProSettings(LblFormBaslik.clProSettings);
+
+    LblOncelikEtik = FormTA.AddNewProLabel(PnlKartForm, 'LblOncelikEtik', 'Oncelik');
+    LblOncelikEtik.Align = alTop;
+    LblOncelikEtik.Height = 18;
+    LblOncelikEtik.Margins.Left   = 16;
+    LblOncelikEtik.Margins.Right  = 16;
+    LblOncelikEtik.Margins.Bottom = 4;
+    LblOncelikEtik.clProSettings.FontSize = 11;
+    LblOncelikEtik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblOncelikEtik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblOncelikEtik.SetclProSettings(LblOncelikEtik.clProSettings);
+
+    CmbOncelik = FormTA.AddNewComboBox(PnlKartForm, 'CmbOncelik');
+    CmbOncelik.Align  = alTop;
+    CmbOncelik.Height = 44;
+    CmbOncelik.Margins.Left   = 16;
+    CmbOncelik.Margins.Right  = 16;
+    CmbOncelik.Margins.Top    = 2;
+    CmbOncelik.Margins.Bottom = 10;
+    CmbOncelik.AddItem('Kritik (2h)', 'Kritik');
+    CmbOncelik.AddItem('Yuksek (8h)', 'Yuksek');
+    CmbOncelik.AddItem('Orta (24h)',  'Orta');
+    CmbOncelik.AddItem('Dusuk (72h)', 'Dusuk');
+    CmbOncelik.ItemIndex = 0;
+
+    EdtTalepBaslik = FormTA.AddNewProEdit(PnlKartForm, 'EdtTalepBaslik', '');
+    EdtTalepBaslik.Align  = alTop;
+    EdtTalepBaslik.Height = 44;
+    EdtTalepBaslik.Margins.Left   = 16;
+    EdtTalepBaslik.Margins.Right  = 16;
+    EdtTalepBaslik.Margins.Bottom = 8;
+    EdtTalepBaslik.TextPrompt = 'Baslik (zorunlu)';
+    EdtTalepBaslik.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtTalepBaslik.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtTalepBaslik.clProSettings.BorderWidth = 1;
+    EdtTalepBaslik.clProSettings.IsRound = True;
+    EdtTalepBaslik.clProSettings.RoundHeight = 10;
+    EdtTalepBaslik.clProSettings.RoundWidth = 10;
+    EdtTalepBaslik.SetclProSettings(EdtTalepBaslik.clProSettings);
+
+    EdtAciklama = FormTA.AddNewProEdit(PnlKartForm, 'EdtAciklama', '');
+    EdtAciklama.Align  = alTop;
+    EdtAciklama.Height = 44;
+    EdtAciklama.Margins.Left   = 16;
+    EdtAciklama.Margins.Right  = 16;
+    EdtAciklama.Margins.Bottom = 8;
+    EdtAciklama.TextPrompt = 'Aciklama (opsiyonel)';
+    EdtAciklama.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtAciklama.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtAciklama.clProSettings.BorderWidth = 1;
+    EdtAciklama.clProSettings.IsRound = True;
+    EdtAciklama.clProSettings.RoundHeight = 10;
+    EdtAciklama.clProSettings.RoundWidth = 10;
+    EdtAciklama.SetclProSettings(EdtAciklama.clProSettings);
+
+    EdtKonum = FormTA.AddNewProEdit(PnlKartForm, 'EdtKonum', '');
+    EdtKonum.Align  = alTop;
+    EdtKonum.Height = 44;
+    EdtKonum.Margins.Left   = 16;
+    EdtKonum.Margins.Right  = 16;
+    EdtKonum.Margins.Bottom = 8;
+    EdtKonum.TextPrompt = 'Konum (zorunlu, orn. Bina A / Kat 2 / Toplanti Salonu)';
+    EdtKonum.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtKonum.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtKonum.clProSettings.BorderWidth = 1;
+    EdtKonum.clProSettings.IsRound = True;
+    EdtKonum.clProSettings.RoundHeight = 10;
+    EdtKonum.clProSettings.RoundWidth = 10;
+    EdtKonum.SetclProSettings(EdtKonum.clProSettings);
+
+    BtnOlustur = FormTA.AddNewProButton(PnlKartForm, 'BtnOlustur', 'Talep Olustur');
+    BtnOlustur.Align  = alTop;
+    BtnOlustur.Height = 48;
+    BtnOlustur.Margins.Left   = 16;
+    BtnOlustur.Margins.Right  = 16;
+    BtnOlustur.Margins.Top    = 4;
+    BtnOlustur.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnOlustur.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+    BtnOlustur.clProSettings.BorderWidth = 0;
+    BtnOlustur.clProSettings.IsRound = True;
+    BtnOlustur.clProSettings.RoundHeight = 10;
+    BtnOlustur.clProSettings.RoundWidth = 10;
+    BtnOlustur.SetclProSettings(BtnOlustur.clProSettings);
+    FormTA.AddNewEvent(BtnOlustur, tbeOnClick, 'OlusturClick');
+
+    LblForumMsg = FormTA.AddNewProLabel(PnlKartForm, 'LblForumMsg', '');
+    LblForumMsg.Align = alTop;
+    LblForumMsg.Height = 36;
+    LblForumMsg.Margins.Left   = 16;
+    LblForumMsg.Margins.Right  = 16;
+    LblForumMsg.Margins.Top    = 8;
+    LblForumMsg.clProSettings.FontHorzAlign = palCenter;
+    LblForumMsg.clProSettings.FontSize = 12;
+    LblForumMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblForumMsg.clProSettings.WordWrap = True;
+    LblForumMsg.SetclProSettings(LblForumMsg.clProSettings);
+    LblForumMsgBoslukAyarla;
+
+    // --- Taleplerim karti ----------------------------------------------------
+    Adim = '8: PnlKartListe';
+    PnlKartListe = FormTA.AddNewProPanel(PnlBody, 'PnlKartListe');
+    PnlKartListe.Align = alTop;
+    PnlKartListe.Height = 520;
+    PnlKartListe.Margins.Bottom = 8;
+    PnlKartListe.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlKartListe.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlKartListe.clProSettings.BorderWidth = 1;
+    PnlKartListe.clProSettings.IsRound = True;
+    PnlKartListe.clProSettings.RoundHeight = 12;
+    PnlKartListe.clProSettings.RoundWidth = 12;
+    PnlKartListe.SetclProSettings(PnlKartListe.clProSettings);
+
+    LblListeEyebrow = FormTA.AddNewProLabel(PnlKartListe, 'LblListeEyebrow', 'TALEPLERIM');
+    LblListeEyebrow.Align = alTop;
+    LblListeEyebrow.Height = 18;
+    LblListeEyebrow.Margins.Top    = 14;
+    LblListeEyebrow.Margins.Left   = 16;
+    LblListeEyebrow.Margins.Right  = 16;
+    LblListeEyebrow.Margins.Bottom = 2;
+    LblListeEyebrow.clProSettings.FontSize = 12;
+    LblListeEyebrow.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblListeEyebrow.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblListeEyebrow.SetclProSettings(LblListeEyebrow.clProSettings);
+
+    PnlListeTitleRow = FormTA.AddNewProPanel(PnlKartListe, 'PnlListeTitleRow');
+    PnlListeTitleRow.Align = alTop;
+    PnlListeTitleRow.Height = 34;
+    PnlListeTitleRow.Margins.Left   = 16;
+    PnlListeTitleRow.Margins.Right  = 16;
+    PnlListeTitleRow.Margins.Bottom = 8;
+    PnlListeTitleRow.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlListeTitleRow.SetclProSettings(PnlListeTitleRow.clProSettings);
+
+    LblTalepCount = FormTA.AddNewProLabel(PnlListeTitleRow, 'LblTalepCount', '0 talep');
+    LblTalepCount.Align = alRight;
+    LblTalepCount.Width = 96;
+    LblTalepCount.Height = 32;
+    LblTalepCount.clProSettings.FontSize = 10;
+    LblTalepCount.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblTalepCount.clProSettings.FontHorzAlign = palTrailing;
+    LblTalepCount.clProSettings.FontVertAlign = palCenter;
+    LblTalepCount.SetclProSettings(LblTalepCount.clProSettings);
+
+    LblListeBaslik = FormTA.AddNewProLabel(PnlListeTitleRow, 'LblListeBaslik', 'Taleplerim');
+    LblListeBaslik.Align = alClient;
+    LblListeBaslik.Margins.Right = 8;
+    LblListeBaslik.clProSettings.FontSize = 16;
+    LblListeBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblListeBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LblListeBaslik.clProSettings.FontHorzAlign = palLeading;
+    LblListeBaslik.clProSettings.FontVertAlign = palCenter;
+    LblListeBaslik.SetclProSettings(LblListeBaslik.clProSettings);
+
+    PnlSolToolbar = FormTA.AddNewProPanel(PnlKartListe, 'PnlSolToolbar');
+    PnlSolToolbar.Align = alTop;
+    PnlSolToolbar.Height = 54;
+    PnlSolToolbar.Margins.Left   = 16;
+    PnlSolToolbar.Margins.Right  = 16;
+    PnlSolToolbar.Margins.Top    = 0;
+    PnlSolToolbar.Margins.Bottom = 8;
+    PnlSolToolbar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+    PnlSolToolbar.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    PnlSolToolbar.clProSettings.BorderWidth = 1;
+    PnlSolToolbar.clProSettings.IsRound = True;
+    PnlSolToolbar.clProSettings.RoundHeight = 10;
+    PnlSolToolbar.clProSettings.RoundWidth = 10;
+    PnlSolToolbar.SetclProSettings(PnlSolToolbar.clProSettings);
+
+    PnlToolPrefix = FormTA.AddNewProPanel(PnlSolToolbar, 'PnlToolPrefix');
+    PnlToolPrefix.Align = alLeft;
+    PnlToolPrefix.Width = 104;
+    PnlToolPrefix.Height = 46;
+    PnlToolPrefix.Margins.Left   = 4;
+    PnlToolPrefix.Margins.Top    = 6;
+    PnlToolPrefix.Margins.Bottom = 6;
+    PnlToolPrefix.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+    PnlToolPrefix.SetclProSettings(PnlToolPrefix.clProSettings);
+
+    BtnYenile = FormTA.AddNewProButton(PnlToolPrefix, 'BtnYenile', 'Yenile');
+    BtnYenile.Align = alClient;
+    BtnYenile.Margins.Top = 2;
+    BtnYenile.Margins.Bottom = 2;
+    BtnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    BtnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnYenile.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnYenile.clProSettings.BorderWidth = 1;
+    BtnYenile.clProSettings.IsRound = True;
+    BtnYenile.clProSettings.RoundHeight = 10;
+    BtnYenile.clProSettings.RoundWidth = 10;
+    BtnYenile.SetclProSettings(BtnYenile.clProSettings);
+    FormTA.AddNewEvent(BtnYenile, tbeOnClick, 'YenileClick');
+
+    EdtTalepAra = FormTA.AddNewProEdit(PnlSolToolbar, 'EdtTalepAra', '');
+    EdtTalepAra.Align = alClient;
+    EdtTalepAra.Height = 38;
+    EdtTalepAra.Margins.Left = 8;
+    EdtTalepAra.Margins.Right = 8;
+    EdtTalepAra.Margins.Top = 8;
+    EdtTalepAra.Margins.Bottom = 8;
+    EdtTalepAra.Padding.Left = 10;
+    EdtTalepAra.Padding.Right = 10;
+    EdtTalepAra.TextPrompt = 'Numara, baslik veya konum';
+    EdtTalepAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtTalepAra.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    EdtTalepAra.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtTalepAra.clProSettings.BorderWidth = 1;
+    EdtTalepAra.clProSettings.IsRound = True;
+    EdtTalepAra.clProSettings.RoundHeight = 10;
+    EdtTalepAra.clProSettings.RoundWidth = 10;
+    EdtTalepAra.clProSettings.FontSize = 13;
+    EdtTalepAra.SetclProSettings(EdtTalepAra.clProSettings);
+    FormTA.AddNewEvent(EdtTalepAra, tbeOnChange, 'TalepAramaDegisti');
+
+    PnlAraSutun = FormTA.AddNewProPanel(PnlSolToolbar, 'PnlAraSutun');
+    PnlAraSutun.Align = alRight;
+    PnlAraSutun.Width = 52;
+    PnlAraSutun.Margins.Left = 0;
+    PnlAraSutun.Margins.Top = 6;
+    PnlAraSutun.Margins.Bottom = 6;
+    PnlAraSutun.Margins.Right = 6;
+    PnlAraSutun.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+    PnlAraSutun.SetclProSettings(PnlAraSutun.clProSettings);
+
+    BtnTalepAra = FormTA.AddNewProButton(PnlAraSutun, 'BtnTalepAra', 'Ara');
+    BtnTalepAra.Align = alClient;
+    BtnTalepAra.Margins.Left = 2;
+    BtnTalepAra.Margins.Right = 2;
+    BtnTalepAra.Margins.Top = 4;
+    BtnTalepAra.Margins.Bottom = 4;
+    BtnTalepAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnTalepAra.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnTalepAra.clProSettings.BorderWidth = 0;
+    BtnTalepAra.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+    BtnTalepAra.clProSettings.FontSize = 12;
+    BtnTalepAra.clProSettings.TextSettings.Font.Style = [fsBold];
+    BtnTalepAra.clProSettings.FontHorzAlign = palCenter;
+    BtnTalepAra.clProSettings.FontVertAlign = palCenter;
+    BtnTalepAra.clProSettings.IsRound = True;
+    BtnTalepAra.clProSettings.RoundHeight = 12;
+    BtnTalepAra.clProSettings.RoundWidth = 12;
+    BtnTalepAra.SetclProSettings(BtnTalepAra.clProSettings);
+    FormTA.AddNewEvent(BtnTalepAra, tbeOnClick, 'TalepAramaDegisti');
+
+    Adim = '9: PnlListHost';
+    PnlListHost = FormTA.AddNewProPanel(PnlKartListe, 'PnlListHost');
+    PnlListHost.Align = alTop;
+    PnlListHost.Height = 320;
+    PnlListHost.Margins.Left   = 16;
+    PnlListHost.Margins.Right  = 16;
+    PnlListHost.Margins.Top    = 0;
+    PnlListHost.Margins.Bottom = 12;
+    PnlListHost.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_INSET);
+    PnlListHost.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlListHost.clProSettings.BorderWidth = 1;
+    PnlListHost.clProSettings.IsRound = True;
+    PnlListHost.clProSettings.RoundHeight = 10;
+    PnlListHost.clProSettings.RoundWidth = 10;
+    PnlListHost.SetclProSettings(PnlListHost.clProSettings);
+
+    Adim = '9b: PnlEmptyState';
+    PnlEmptyState = FormTA.AddNewProPanel(PnlListHost, 'PnlEmptyState');
+    PnlEmptyState.Align = alClient;
+    PnlEmptyState.Margins.Left   = 12;
+    PnlEmptyState.Margins.Right  = 12;
+    PnlEmptyState.Margins.Top    = 12;
+    PnlEmptyState.Margins.Bottom = 12;
+    PnlEmptyState.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlEmptyState.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlEmptyState.clProSettings.BorderWidth = 1;
+    PnlEmptyState.clProSettings.IsRound = True;
+    PnlEmptyState.clProSettings.RoundHeight = 12;
+    PnlEmptyState.clProSettings.RoundWidth = 12;
+    PnlEmptyState.SetclProSettings(PnlEmptyState.clProSettings);
+
+    PnlEmptyCenter = FormTA.AddNewProPanel(PnlEmptyState, 'PnlEmptyCenter');
+    PnlEmptyCenter.Align = alTop;
+    PnlEmptyCenter.Height = 168;
+    PnlEmptyCenter.Margins.Left  = 10;
+    PnlEmptyCenter.Margins.Right = 10;
+    PnlEmptyCenter.Margins.Top   = 12;
+    PnlEmptyCenter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlEmptyCenter.SetclProSettings(PnlEmptyCenter.clProSettings);
+
+    ImgEmpty = FormTA.AddNewProImage(PnlEmptyCenter, 'ImgEmpty');
+    ImgEmpty.Visible = False;
+    ImgEmpty.Height = 0;
+    ImgEmpty.Width = 0;
+
+    LblEmptyTitle = FormTA.AddNewProLabel(PnlEmptyCenter, 'LblEmptyTitle', 'Henuz talebiniz yok');
+    LblEmptyTitle.Align = alTop;
+    LblEmptyTitle.Height = 30;
+    LblEmptyTitle.Margins.Top   = 22;
+    LblEmptyTitle.Margins.Left  = 12;
+    LblEmptyTitle.Margins.Right = 12;
+    LblEmptyTitle.clProSettings.FontSize = 15;
+    LblEmptyTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblEmptyTitle.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LblEmptyTitle.clProSettings.FontHorzAlign = palCenter;
+    LblEmptyTitle.clProSettings.WordWrap = True;
+    LblEmptyTitle.SetclProSettings(LblEmptyTitle.clProSettings);
+
+    LblEmptySub = FormTA.AddNewProLabel(PnlEmptyCenter, 'LblEmptySub',
+      'Yenile ile listeyi guncelleyin. Arama kutusu ile filtreleyebilirsiniz.');
+    LblEmptySub.Align = alTop;
+    LblEmptySub.Height = 56;
+    LblEmptySub.Margins.Left   = 14;
+    LblEmptySub.Margins.Right  = 14;
+    LblEmptySub.Margins.Top    = 8;
+    LblEmptySub.clProSettings.FontSize = 12;
+    LblEmptySub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblEmptySub.clProSettings.FontHorzAlign = palCenter;
+    LblEmptySub.clProSettings.WordWrap = True;
+    LblEmptySub.SetclProSettings(LblEmptySub.clProSettings);
+
+    Adim = '10: LbTalepler TclProListView';
+    LbTalepler = FormTA.AddNewProListView(PnlListHost, 'LbTalepler');
+    LbTalepler.Align = alClient;
+    LbTalepler.Margins.Left   = 8;
+    LbTalepler.Margins.Right  = 8;
+    LbTalepler.Margins.Top    = 8;
+    LbTalepler.Margins.Bottom = 8;
+    LbTalepler.clProSettings.ViewType = lvWaterFall;
+    LbTalepler.clProSettings.IsRound = True;
+    LbTalepler.clProSettings.IsFill = True;
+    LbTalepler.clProSettings.ColCount = 1;
+    LbTalepler.clProSettings.ItemHeight = 128;
+    LbTalepler.clProSettings.ItemSpace = 8;
+    LbTalepler.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_INSET);
+    LbTalepler.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    LbTalepler.clProSettings.BorderWidth = 1;
+    LbTalepler.clProSettings.RoundWidth = 8;
+    LbTalepler.clProSettings.RoundHeight = 8;
+    LbTalepler.SetclProSettings(LbTalepler.clProSettings);
+
+    LvDesigner = FormTA.AddNewProListViewDesignerPanel(LbTalepler, 'LvDesigner');
+    LvDesigner.Align = alTop;
+    LvDesigner.Height = 118;
+    LvDesigner.Width = 352;
+    LvDesigner.Margins.Left = 0;
+    LvDesigner.Margins.Right = 0;
+    LvDesigner.clProSettings.IsRound = True;
+    LvDesigner.clProSettings.IsFill = True;
+    LvDesigner.clProSettings.ItemHeight = 128;
+    LvDesigner.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvDesigner.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    LvDesigner.clProSettings.BorderWidth = 1;
+    LvDesigner.clProSettings.RoundWidth = 10;
+    LvDesigner.clProSettings.RoundHeight = 10;
+    LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+    LbTalepler.SetDesignerPanel(LvDesigner);
+
+    LvLMain = FormTA.AddNewProLabel(LvDesigner, 'MAIN_TEXT', '{MAIN_TEXT}');
+    LvLMain.Align = alMostTop;
+    LvLMain.Height = 38;
+    LvLMain.Margins.Top = 8;
+    LvLMain.Margins.Left = 12;
+    LvLMain.Margins.Right = 12;
+    LvLMain.clProSettings.FontSize = 14;
+    LvLMain.clProSettings.TextSettings.Font.Style = [fsBold];
+    LvLMain.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LvLMain.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LvLMain.clProSettings.IsTransparent = False;
+    LvLMain.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLMain.clProSettings.FontVertAlign = palCenter;
+    LvLMain.clProSettings.FontHorzAlign = palLeading;
+    LvLMain.clProSettings.WordWrap = True;
+    LvLMain.SetclProSettings(LvLMain.clProSettings);
+    LvDesigner.AddPanelObject(LvLMain, clCaption);
+
+    LvLSub = FormTA.AddNewProLabel(LvDesigner, 'SUB_TEXT', '{SUB_TEXT}');
+    LvLSub.Align = alMostTop;
+    LvLSub.Height = 28;
+    LvLSub.Margins.Top = 4;
+    LvLSub.Margins.Left = 12;
+    LvLSub.Margins.Right = 12;
+    LvLSub.clProSettings.FontSize = 12;
+    LvLSub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLSub.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLSub.clProSettings.IsTransparent = False;
+    LvLSub.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLSub.clProSettings.WordWrap = True;
+    LvLSub.SetclProSettings(LvLSub.clProSettings);
+    LvDesigner.AddPanelObject(LvLSub, clText);
+
+    LvLFoot = FormTA.AddNewProLabel(LvDesigner, 'FOOTER_TEXT', '{FOOTER_TEXT}');
+    LvLFoot.Align = alMostTop;
+    LvLFoot.Height = 22;
+    LvLFoot.Margins.Top = 4;
+    LvLFoot.Margins.Left = 12;
+    LvLFoot.Margins.Right = 12;
+    LvLFoot.clProSettings.FontSize = 11;
+    LvLFoot.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLFoot.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LvLFoot.clProSettings.IsTransparent = False;
+    LvLFoot.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    LvLFoot.SetclProSettings(LvLFoot.clProSettings);
+    LvDesigner.AddPanelObject(LvLFoot, clText1);
+
+    LbTalepler.Visible = False;
+    PnlEmptyState.Visible = True;
+
+    Adim = '12: UygulaResponsiveTalepAcma ilk';
+    UygulaResponsiveTalepAcma;
+
+    Adim = '13: TmrYerlesim';
+    TmrYerlesim = FormTA.AddNewTimer(FormTA, 'TmrYerlesim', 200);
+    FormTA.AddNewEvent(TmrYerlesim, tbeOnTimer, 'YerlesimLayoutTick');
+    TmrYerlesim.Enabled = True;
+
+    Adim = '14: FormTA.Run';
+    FormTA.Run;
+
+  except
+    ShowMessage('Talep ekrani hatasi (adim ' + Adim + '): ' +
+                LastExceptionClassName + ' / ' + LastExceptionMessage);
+  }
+}

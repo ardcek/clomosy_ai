@@ -1,0 +1,1370 @@
+  // =============================================================================
+  // uSahaPersoneli.tro  -  SAHA PERSONELI EKRANI
+  // -----------------------------------------------------------------------------
+  // AKIS:
+  //   - Bana atanan ve aktif olan talepleri listele
+  //     RTDB GET /tickets?orderBy="atananPersonelId"&equalTo="<uid>"
+  //     (durumu Tamamlandi olanlar listede gosterilmez)
+  //   - Talep sec -> durum gecisi butonlari ile guncelle:
+  //       Atandi    -> Yolda
+  //       Atandi    -> Islemde       (yerinde mudahale, yola cikma gerekmez)
+  //       Yolda     -> Islemde
+  //       Islemde   -> Beklemede  ya da  Tamamlandi
+  //       Beklemede -> Islemde
+  //       Beklemede -> Tamamlandi
+  //   - Her gecis: tickets/<id> PATCH durum + tickets/<id>/events POST kaydi
+  // =============================================================================
+
+
+  // ============================== [TASARIM TOKEN] ==============================
+  // uYoneticiAtama.tro ile ayni palet ve kirilimlar
+
+  const
+    C_SURFACE     = '#F8FAFC';
+    C_CARD        = '#FFFFFF';
+    C_INSET       = '#F1F5F9';
+    C_BORDER      = '#E2E8F0';
+    C_PRIMARY     = '#2563EB';
+    C_PRIMARY_BG  = '#EFF6FF';
+    C_DANGER      = '#EF4444';
+    C_DANGER_BG   = '#FEF2F2';
+    C_SUCCESS     = '#10B981';
+    C_TEXT        = '#0F172A';
+    C_MUTED       = '#64748B';
+    C_ON_SOLID    = '#FFFFFF';
+    C_HEADER_BAR  = '#EFF6FF';
+    C_MUTED_BG    = '#EEF2FF';
+    C_BODY_END    = '#E8EDF5';
+    C_BREAK_NARROW = 760;
+    C_SAFE_BOTTOM  = 40;
+    C_BTN_YOLDA    = '#0891B2';
+    C_BTN_ISLEM    = '#F59E0B';
+    C_BTN_BEK      = '#64748B';
+    C_BTN_TAMAM    = '#10B981';
+
+
+  // ============================== [GLOBAL VAR] =================================
+
+  var
+    FormP        : TclForm;
+    PnlHeader    : TclProPanel;
+    LblBaslik    : TclProLabel;
+    LblKullanici : TclProLabel;
+    BtnCikis     : TclProButton;
+    PnlHeadSep   : TclProPanel;
+    VScroll      : TclVertScrollBox;
+    PnlBody      : TclProPanel;
+
+    PnlKartListe : TclProPanel;
+    LblGorevEyebrow : TclProLabel;
+    PnlGorevTitleRow : TclProPanel;
+    LblGorevTitle : TclProLabel;
+    LblGorevCount : TclProLabel;
+    PnlSolToolbar : TclProPanel;
+    PnlToolPrefix : TclProPanel;
+    BtnYenile    : TclProButton;
+    EdtGorevAra  : TClProEdit;
+    PnlAraSutun  : TclProPanel;
+    BtnGorevAra  : TclProButton;
+    PnlListHost  : TclProPanel;
+    LbGorevler   : TclProListView;
+    LvDesigner   : TClProListViewDesignerPanel;
+    LvLMain      : TclProLabel;
+    LvLSub       : TclProLabel;
+    LvLFoot      : TclProLabel;
+    PnlEmptyState : TclProPanel;
+    PnlEmptyCenter : TclProPanel;
+    ImgEmpty     : TclProImage;
+    LblEmptyTitle : TclProLabel;
+    LblEmptySub  : TclProLabel;
+
+    PnlKartAksiyon : TclProPanel;
+    LblAksiyonEyebrow : TclProLabel;
+    LblSecili    : TclProLabel;
+    LblDurum     : TclProLabel;
+    EdtNot       : TclProEdit;
+    BtnYolda     : TclProButton;
+    BtnIslemde   : TclProButton;
+    BtnBeklemede : TclProButton;
+    BtnTamam     : TclProButton;
+    LblMsg       : TclProLabel;
+
+    LastGorevJson : String;
+    Adim          : String;
+    TmrYerlesim   : TClTimer;
+
+
+  // ============================ [SNIPPET: uRtdb] ===============================
+
+  // ============================ [SNIPPET: Session] =============================
+  // Clomosy.GlobalVariableString TEK scalar slot. Coklu key icin pipe ayrim:
+  //   |Token=...|UserId=...|AdSoyad=...|
+
+  function SessionGet(key : String) : String;
+  var
+    s, marker, rest : String;
+  {
+    s = Clomosy.GlobalVariableString;
+    marker = '|' + key + '=';
+    if (Pos(marker, s) > 0)
+    {
+      rest = clGetStringAfter(s, marker);
+      Result = clGetStringTo(rest, '|');
+    }
+    else
+    {
+      Result = '';
+    }
+  }
+
+  void SessionSet(key : String; value : String);
+  var
+    s, marker, before, rest, after : String;
+  {
+    s = Clomosy.GlobalVariableString;
+    if (s == '')
+    {
+      s = '|';
+    }
+    if (Copy(s, 1, 1) <> '|')
+    {
+      s = '|' + s;
+    }
+    if (Copy(s, Length(s), 1) <> '|')
+    {
+      s = s + '|';
+    }
+
+    marker = '|' + key + '=';
+    if (Pos(marker, s) > 0)
+    {
+      before = clGetStringTo(s, marker);
+      rest   = clGetStringAfter(s, marker);
+      after  = clGetStringAfter(rest, '|');
+      s = before + marker + value + '|' + after;
+    }
+    else
+    {
+      s = s + key + '=' + value + '|';
+    }
+
+    Clomosy.GlobalVariableString = s;
+  }
+
+  void SessionClear;
+  {
+    Clomosy.GlobalVariableString = '';
+  }
+
+
+  function DbUrl : String;
+  var u : String;
+  {
+    u = SessionGet('DbUrl');
+    if (u == '')
+    {
+      Result = 'https://akilli-ariza-saha-default-rtdb.europe-west1.firebasedatabase.app';
+    }
+    else
+    {
+      Result = u;
+    }
+  }
+
+  function Token : String;
+  {
+    Result = SessionGet('Token');
+  }
+
+  function AuthQuery : String;
+  {
+    Result = 'auth=' + Token;
+  }
+
+  function RtdbUrl(Path : String; ExtraQuery : String) : String;
+  var q : String;
+  {
+    q = AuthQuery;
+    if (ExtraQuery <> '')
+    {
+      q = q + '&' + ExtraQuery;
+    }
+    Result = DbUrl + '/' + Path + '.json?' + q;
+  }
+
+  function JsonEsc(S : String) : String;
+  var R : String;
+  {
+    R = clGetStringReplace(S, '\', '\\');
+    R = clGetStringReplace(R, '"', '\"');
+    R = clGetStringReplace(R, Chr(13), '');
+    R = clGetStringReplace(R, Chr(10), ' ');
+    Result = R;
+  }
+
+  function RtdbGet(Path : String; Query : String) : String;
+  var
+    R   : TclRest;
+    url : String;
+  {
+    url = RtdbUrl(Path, Query);
+    SessionSet('LastReqUrl', url);
+    R = TclRest.Create;
+    try
+      R.BaseURL = url;
+      R.Method  = rmGET;
+      R.Accept  = 'application/json';
+      R.Execute;
+      Result = R.Response;
+    finally
+      R.Free;
+    }
+  }
+
+  function RtdbPost(Path : String; BodyJson : String) : String;
+  var R : TclRest;
+  {
+    R = TclRest.Create;
+    try
+      R.BaseURL     = RtdbUrl(Path, '');
+      R.Method      = rmPOST;
+      R.Accept      = 'application/json';
+      R.ContentType = 'application/json';
+      R.Body        = BodyJson;
+      R.Execute;
+      Result = R.Response;
+    finally
+      R.Free;
+    }
+  }
+
+  function RtdbPatch(Path : String; BodyJson : String) : String;
+  var R : TclRest;
+  {
+    R = TclRest.Create;
+    try
+      R.BaseURL     = RtdbUrl(Path, '');
+      R.Method      = rmPATCH;
+      R.Accept      = 'application/json';
+      R.ContentType = 'application/json';
+      R.Body        = BodyJson;
+      R.Execute;
+      Result = R.Response;
+    finally
+      R.Free;
+    }
+  }
+
+  function JsonStrAlan(Json : String; Alan : String) : String;
+  var
+    marker : String;
+    s      : String;
+  {
+    marker = '"' + Alan + '"';
+    if (Pos(marker, Json) == 0)
+    {
+      Result = '';
+    }
+    else
+    {
+      s = clGetStringAfter(Json, marker);
+      s = clGetStringAfter(s, ':');
+      s = clGetStringAfter(s, '"');
+      Result = clGetStringTo(s, '"');
+    }
+  }
+
+  function NowIso : String;
+  {
+    Result = FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now);
+  }
+
+
+  function IMin(a, b : Integer) : Integer;
+  {
+    if (a < b)
+    {
+      Result = a;
+    }
+    else
+    {
+      Result = b;
+    }
+  }
+
+  function IMax(a, b : Integer) : Integer;
+  {
+    if (a > b)
+    {
+      Result = a;
+    }
+    else
+    {
+      Result = b;
+    }
+  }
+
+
+  void GorevListeGorunum(listeDolu : Boolean);
+  {
+    if (listeDolu)
+    {
+      LbGorevler.Visible = True;
+      PnlEmptyState.Visible = False;
+      LbGorevler.BringToFront;
+    }
+    else
+    {
+      LbGorevler.Visible = False;
+      PnlEmptyState.Visible = True;
+    }
+  }
+
+
+  void GorevListeDesignerRenkYenile;
+  {
+    if (LvDesigner <> nil)
+    {
+      LvDesigner.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+    }
+    if (LvLMain <> nil)
+    {
+      LvLMain.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LvLMain.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LvLMain.clProSettings.IsTransparent = False;
+      LvLMain.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLMain.SetclProSettings(LvLMain.clProSettings);
+    }
+    if (LvLSub <> nil)
+    {
+      LvLSub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LvLSub.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LvLSub.clProSettings.IsTransparent = False;
+      LvLSub.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLSub.SetclProSettings(LvLSub.clProSettings);
+    }
+    if (LvLFoot <> nil)
+    {
+      LvLFoot.clProSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      LvLFoot.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      LvLFoot.clProSettings.IsTransparent = False;
+      LvLFoot.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLFoot.SetclProSettings(LvLFoot.clProSettings);
+    }
+  }
+
+
+  void GorevListesiYukle(json : String; filtre : String);
+  var
+    rem, key, blok : String;
+    baslangic, adet : Integer;
+    ticketNo, baslik, durum : String;
+    konum, oncelik : String;
+    arr : String;
+    hay : String;
+    ned : String;
+    ilk : Boolean;
+    gec : Boolean;
+    depth, idx : Integer;
+    ch : String;
+    inStr, esc : Boolean;
+  {
+    arr = '[';
+    ilk = True;
+    adet = 0;
+    ned = Trim(filtre);
+
+    if ((json == '') || (json == 'null') || (json == '{}'))
+    {
+      LbGorevler.ClearList;
+      GorevListeGorunum(False);
+      LblGorevCount.Text = '0 gorev';
+      Exit;
+    }
+
+    rem = json;
+    while (Pos('":{', rem) > 0)
+    {
+      baslangic = Pos('"', rem);
+      if (baslangic == 0) { break; }
+      rem = Copy(rem, baslangic + 1, Length(rem));
+
+      key = clGetStringTo(rem, '":{');
+      rem = clGetStringAfter(rem, '":{');
+
+      depth = 1;
+      idx   = 1;
+      inStr = False;
+      esc   = False;
+      while ((idx <= Length(rem)) && (depth > 0))
+      {
+        ch = Copy(rem, idx, 1);
+        if (esc == True)
+        {
+          esc = False;
+        }
+        else if (ch == Chr(92))
+        {
+          esc = True;
+        }
+        else if (ch == '"')
+        {
+          inStr = (inStr == False);
+        }
+        else if (inStr == False)
+        {
+          if      (ch == '{') { depth = depth + 1; }
+          else if (ch == '}') { depth = depth - 1; }
+        }
+        idx = idx + 1;
+      }
+      blok = Copy(rem, 1, idx - 2);
+      rem  = Copy(rem, idx, Length(rem));
+
+      ticketNo = JsonStrAlan('{' + blok + '}', 'ticketNo');
+      baslik   = JsonStrAlan('{' + blok + '}', 'baslik');
+      durum    = JsonStrAlan('{' + blok + '}', 'durum');
+      konum    = JsonStrAlan('{' + blok + '}', 'konum');
+      oncelik  = JsonStrAlan('{' + blok + '}', 'oncelik');
+
+      if (durum <> 'Tamamlandi')
+      {
+        gec = True;
+        if (ned <> '')
+        {
+          hay = AnsiLowerCase(ticketNo + ' ' + baslik + ' ' + konum + ' ' + oncelik);
+          if (Pos(AnsiLowerCase(ned), hay) == 0)
+          {
+            gec = False;
+          }
+        }
+        if (gec == True)
+        {
+          if (ilk == False) { arr = arr + ','; }
+          arr = arr + '{"MAIN_TEXT":"' + JsonEsc(ticketNo + ' - ' + baslik) + '",' +
+            '"SUB_TEXT":"' + JsonEsc(konum + '  |  ' + oncelik) + '",' +
+            '"FOOTER_TEXT":"' + JsonEsc(durum) + '",' +
+            '"RECORD_GUID":"' + key + '"}';
+          ilk = False;
+          adet = adet + 1;
+        }
+      }
+    }
+
+    if (ilk == False)
+    {
+      arr = arr + ']';
+      LbGorevler.clLoadProListViewDataFromDataset(Clomosy.ClDataSetFromJSON(arr));
+      GorevListeGorunum(True);
+      GorevListeDesignerRenkYenile;
+      LbGorevler.SetclProSettings(LbGorevler.clProSettings);
+      LblGorevCount.Text = IntToStr(adet) + ' gorev';
+    }
+    else
+    {
+      LbGorevler.ClearList;
+      GorevListeGorunum(False);
+      LblGorevCount.Text = '0 gorev';
+    }
+  }
+
+
+  void YerlesimLayoutIste;
+  {
+    if (TmrYerlesim <> nil)
+    {
+      TmrYerlesim.Enabled = True;
+    }
+  }
+
+
+  void GorevAramaDegisti;
+  {
+    if (LastGorevJson == '')
+    {
+      Exit;
+    }
+    GorevListesiYukle(LastGorevJson, Trim(EdtGorevAra.Text));
+    YerlesimLayoutIste;
+  }
+
+
+  // Bos mesaj satiri yer kaplamasin.
+  void LblMsgBoslukAyarla;
+  {
+    if (Trim(LblMsg.Text) == '')
+    {
+      LblMsg.Visible = False;
+      LblMsg.Height = 0;
+      LblMsg.Margins.Top = 0;
+      LblMsg.Margins.Bottom = 0;
+      LblMsg.Align = alTop;
+    }
+    else
+    {
+      LblMsg.Visible = True;
+      LblMsg.Align = alTop;
+      LblMsg.Height = 48;
+      LblMsg.Margins.Top = 10;
+      LblMsg.Margins.Bottom = 12;
+      LblMsg.clProSettings.WordWrap = True;
+      LblMsg.clProSettings.FontVertAlign = palCenter;
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+    }
+  }
+
+
+  void UygulaResponsiveSaha;
+  var
+    rawW    : Integer;
+    narrow  : Boolean;
+    sideM   : Integer;
+    innerW  : Integer;
+    listH   : Integer;
+    kartL   : Integer;
+    aksH    : Integer;
+    bodyH   : Integer;
+    btnH    : Integer;
+    btnGap  : Integer;
+  {
+    rawW = FormP.clWidth;
+    narrow = (rawW > 250) && (rawW < C_BREAK_NARROW);
+
+    if (narrow)
+    {
+      sideM = 8;
+      PnlBody.Margins.Left   = sideM;
+      PnlBody.Margins.Right  = sideM;
+      PnlBody.Margins.Top    = 8;
+      PnlBody.Margins.Bottom = 8;
+    }
+    else
+    {
+      sideM = 12;
+      PnlBody.Margins.Left   = sideM;
+      PnlBody.Margins.Right  = sideM;
+      PnlBody.Margins.Top    = 12;
+      PnlBody.Margins.Bottom = 12;
+    }
+
+    innerW = rawW - PnlBody.Margins.Left - PnlBody.Margins.Right;
+    innerW = IMax(innerW, 280);
+
+    LblBaslik.Width = IMin(220, IMax(160, innerW div 2));
+
+    if (narrow)
+    {
+      BtnCikis.Width = 72;
+    }
+    else
+    {
+      BtnCikis.Width = 80;
+    }
+
+    listH = Round(FormP.clHeight * 0.33);
+    listH = IMax(listH, 228);
+    listH = IMin(listH, 392);
+    PnlListHost.Height = listH;
+
+    kartL = 172 + listH + 20;
+    PnlKartListe.Height = kartL;
+
+    // Durum karti: ust blok + 4 tam genislik dugme (dikey) + mesaj.
+    aksH = 458;
+    if (Trim(LblMsg.Text) <> '')
+    {
+      aksH = 528;
+    }
+    PnlKartAksiyon.Height = aksH;
+
+    bodyH = kartL + 12 + aksH + PnlBody.Margins.Top + PnlBody.Margins.Bottom + C_SAFE_BOTTOM + 16;
+    bodyH = IMax(bodyH, FormP.clHeight - 58 + C_SAFE_BOTTOM);
+    bodyH = IMax(bodyH, 640);
+    PnlBody.Height = bodyH;
+
+    PnlSolToolbar.Height = 54;
+    if (innerW < 340)
+    {
+      PnlToolPrefix.Width = 72;
+    }
+    else
+    {
+      PnlToolPrefix.Width = 104;
+    }
+
+    if (innerW < 340)
+    {
+      EdtGorevAra.clProSettings.FontSize = 11;
+      EdtGorevAra.SetclProSettings(EdtGorevAra.clProSettings);
+      EdtGorevAra.TextPrompt = 'Numara, baslik veya konum';
+      BtnGorevAra.clProSettings.FontSize = 11;
+      BtnGorevAra.SetclProSettings(BtnGorevAra.clProSettings);
+    }
+    else
+    {
+      EdtGorevAra.clProSettings.FontSize = 13;
+      EdtGorevAra.SetclProSettings(EdtGorevAra.clProSettings);
+      EdtGorevAra.TextPrompt = 'Numara, baslik veya konum';
+      BtnGorevAra.clProSettings.FontSize = 12;
+      BtnGorevAra.SetclProSettings(BtnGorevAra.clProSettings);
+    }
+
+    if (narrow)
+    {
+      btnH = 46;
+      btnGap = 8;
+    }
+    else
+    {
+      btnH = 48;
+      btnGap = 10;
+    }
+
+    BtnYolda.Height = btnH;
+    BtnIslemde.Height = btnH;
+    BtnBeklemede.Height = btnH;
+    BtnTamam.Height = btnH;
+
+    BtnYolda.Margins.Top = 12;
+    BtnIslemde.Margins.Top = btnGap;
+    BtnBeklemede.Margins.Top = btnGap;
+    BtnTamam.Margins.Top = btnGap;
+
+    LblMsg.Margins.Top = 12;
+
+    LblMsgBoslukAyarla;
+
+    if (LvDesigner <> nil)
+    {
+      LvDesigner.Width = IMax(200, innerW - 64);
+      LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+    }
+    GorevListeDesignerRenkYenile;
+  }
+
+
+  void YerlesimLayoutTick;
+  {
+    UygulaResponsiveSaha;
+    TmrYerlesim.Enabled = False;
+  }
+
+
+  // ========================= [DURUM GECIS KURALLARI] ===========================
+  // Gecerli gecisler:
+  //   Atandi    -> Yolda
+  //   Atandi    -> Islemde       (yerinde mudahale, yola cikma gerekmez)
+  //   Yolda     -> Islemde
+  //   Islemde   -> Beklemede
+  //   Islemde   -> Tamamlandi
+  //   Beklemede -> Islemde
+  //   Beklemede -> Tamamlandi    (beklemeden tamamlanabilir)
+
+  function GecisGecerli(eski : String; yeni : String) : Boolean;
+  {
+    if      ((eski == 'Atandi')    && (yeni == 'Yolda'))      { Result = True; }
+    else if ((eski == 'Atandi')    && (yeni == 'Islemde'))    { Result = True; }
+    else if ((eski == 'Yolda')     && (yeni == 'Islemde'))    { Result = True; }
+    else if ((eski == 'Islemde')   && (yeni == 'Beklemede'))  { Result = True; }
+    else if ((eski == 'Islemde')   && (yeni == 'Tamamlandi')) { Result = True; }
+    else if ((eski == 'Beklemede') && (yeni == 'Islemde'))    { Result = True; }
+    else if ((eski == 'Beklemede') && (yeni == 'Tamamlandi')) { Result = True; }
+    else                                                       { Result = False; }
+  }
+
+
+  // =========================== [EVENT HANDLERS] ================================
+
+  void GorevleriYenile;
+  var
+    uid  : String;
+    json : String;
+  {
+    uid = SessionGet('UserId');
+    if (uid == '')
+    {
+      ShowMessage('Oturum yok');
+      Clomosy.RunUnit('uLogin');
+      FormP.clHide;
+    }
+    else
+    {
+      try
+        json = RtdbGet('tickets', 'orderBy="atananPersonelId"&equalTo="' + uid + '"');
+        SessionSet('LastReqResp', json);
+        LastGorevJson = json;
+        try
+          GorevListesiYukle(json, Trim(EdtGorevAra.Text));
+          LblSecili.Text = 'Gorev secilmedi';
+          LblDurum.Text  = '';
+          LblSecili.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+          LblSecili.SetclProSettings(LblSecili.clProSettings);
+        except
+          LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+          LblMsg.SetclProSettings(LblMsg.clProSettings);
+          LblMsg.Text = 'Liste hatasi: ' + LastExceptionMessage;
+        }
+      except
+        LastGorevJson = '';
+        LbGorevler.ClearList;
+        GorevListeGorunum(False);
+        LblGorevCount.Text = '0 gorev';
+        LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+        LblMsg.SetclProSettings(LblMsg.clProSettings);
+        LblMsg.Text = 'Listeleme (RTDB): ' + LastExceptionMessage;
+      }
+    }
+    YerlesimLayoutIste;
+  }
+
+
+  void GorevleriYenileBaslat;
+  {
+    LblMsg.Text = '';
+    LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblMsg.SetclProSettings(LblMsg.clProSettings);
+    GorevleriYenile;
+  }
+
+
+  void GorevSecildi;
+  var cap, sub_, dur : String;
+  {
+    cap   = LbGorevler.clSelectedItemData(clCaption);
+    sub_  = LbGorevler.clSelectedItemData(clText);
+    dur   = LbGorevler.clSelectedItemData(clText1);
+    if (cap <> '')
+    {
+      LblSecili.Text = 'Secilen: ' + cap;
+      LblDurum.Text  = 'Mevcut durum: ' + dur;
+      LblSecili.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LblSecili.SetclProSettings(LblSecili.clProSettings);
+      if (sub_ <> '')
+      {
+        LblDurum.Text = LblDurum.Text + Chr(10) + sub_;
+      }
+    }
+  }
+
+
+  // Tek bir geciste calisacak genel gunceller.
+
+  void DurumDegistir(yeniDurum : String);
+  var
+    ticketId   : String;
+    eskiDurum  : String;
+    uid        : String;
+    not_       : String;
+    now_       : String;
+    body, ev   : String;
+  {
+    LblMsg.Text = '';
+    LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblMsg.SetclProSettings(LblMsg.clProSettings);
+
+    ticketId  = LbGorevler.clSelectedItemData(clRecord_GUID);
+    eskiDurum = LbGorevler.clSelectedItemData(clText1);
+
+    if (ticketId == '')
+    {
+      LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+      LblMsg.Text = 'Lutfen bir gorev secin';
+      YerlesimLayoutIste;
+      Exit;
+    }
+
+    if (not GecisGecerli(eskiDurum, yeniDurum))
+    {
+      LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+      LblMsg.Text = eskiDurum + ' -> ' + yeniDurum + ' gecisi gecerli degil';
+      YerlesimLayoutIste;
+      Exit;
+    }
+
+    uid  = SessionGet('UserId');
+    not_ = Trim(EdtNot.Text);
+    now_ = NowIso;
+
+    body = '{' +
+      '"durum":"'      + yeniDurum + '",' +
+      '"updatedAt":"'  + now_      + '"' +
+    '}';
+
+    try
+      RtdbPatch('tickets/' + ticketId, body);
+
+      ev = '{' +
+        '"fromStatus":"' + eskiDurum + '",' +
+        '"toStatus":"'   + yeniDurum + '",' +
+        '"changedBy":"'  + uid + '",' +
+        '"changedAt":"'  + now_ + '",' +
+        '"note":"'       + JsonEsc(not_) + '"' +
+      '}';
+      RtdbPost('tickets/' + ticketId + '/events', ev);
+
+      LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_SUCCESS);
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+      LblMsg.Text = 'Durum guncellendi: ' + yeniDurum;
+      EdtNot.Text = '';
+      GorevleriYenile;
+    except
+      LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+      LblMsg.Text = 'Guncelleme hatasi: ' + LastExceptionMessage;
+      YerlesimLayoutIste;
+    }
+  }
+
+  void YoldaClick;       { DurumDegistir('Yolda');      }
+  void IslemdeClick;     { DurumDegistir('Islemde');    }
+  void BeklemedeClick;   { DurumDegistir('Beklemede');  }
+  void TamamlandiClick;  { DurumDegistir('Tamamlandi'); }
+
+  void CikisClick;
+  {
+    SessionClear;
+    Clomosy.RunUnit('uLogin');
+    FormP.clHide;
+  }
+
+
+  // ============================== [UI KURULUM] =================================
+
+  {
+    try
+      Adim = '1: FormP.Create';
+      FormP = TclForm.Create(Self);
+      LastGorevJson = '';
+
+      Adim = '2: SetFormColor';
+      FormP.SetFormColor(C_HEADER_BAR, C_BODY_END, clGVertical);
+      FormP.clsetCaption('Saha Personeli');
+
+      Adim = '3: PnlHeader';
+      PnlHeader = FormP.AddNewProPanel(FormP, 'PnlHeader');
+      PnlHeader.Align  = alTop;
+      PnlHeader.Height = 56;
+      PnlHeader.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_HEADER_BAR);
+      PnlHeader.SetclProSettings(PnlHeader.clProSettings);
+
+      LblBaslik = FormP.AddNewProLabel(PnlHeader, 'LblBaslik', 'Gorevlerim');
+      LblBaslik.Align  = alLeft;
+      LblBaslik.Width  = 220;
+      LblBaslik.Margins.Left = 16;
+      LblBaslik.Margins.Top  = 12;
+      LblBaslik.clProSettings.FontSize = 17;
+      LblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LblBaslik.SetclProSettings(LblBaslik.clProSettings);
+
+      LblKullanici = FormP.AddNewProLabel(PnlHeader, 'LblKullanici', '');
+      LblKullanici.Visible = False;
+      LblKullanici.Height = 0;
+      LblKullanici.Align = alClient;
+      LblKullanici.Margins.Right = 100;
+      LblKullanici.Margins.Top  = 14;
+      LblKullanici.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblKullanici.clProSettings.FontHorzAlign = palTrailing;
+      LblKullanici.SetclProSettings(LblKullanici.clProSettings);
+
+      BtnCikis = FormP.AddNewProButton(PnlHeader, 'BtnCikis', 'Cikis');
+      BtnCikis.Align = alRight;
+      BtnCikis.Width = 80;
+      BtnCikis.Height = 36;
+      BtnCikis.Margins.Right = 12;
+      BtnCikis.Margins.Top = 6;
+      BtnCikis.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_DANGER_BG);
+      BtnCikis.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      BtnCikis.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_DANGER);
+      BtnCikis.clProSettings.BorderWidth = 1;
+      BtnCikis.clProSettings.IsRound = True;
+      BtnCikis.clProSettings.RoundHeight = 8;
+      BtnCikis.clProSettings.RoundWidth = 8;
+      BtnCikis.SetclProSettings(BtnCikis.clProSettings);
+      FormP.AddNewEvent(BtnCikis, tbeOnClick, 'CikisClick');
+
+      Adim = '4: PnlHeadSep';
+      PnlHeadSep = FormP.AddNewProPanel(FormP, 'PnlHeadSep');
+      PnlHeadSep.Align  = alTop;
+      PnlHeadSep.Height = 1;
+      PnlHeadSep.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BORDER);
+      PnlHeadSep.SetclProSettings(PnlHeadSep.clProSettings);
+
+      Adim = '5: VScroll';
+      VScroll = FormP.AddNewVertScrollBox(FormP, 'VScroll');
+      VScroll.Align = alClient;
+
+      Adim = '6: PnlBody';
+      PnlBody = FormP.AddNewProPanel(VScroll, 'PnlBody');
+      PnlBody.Align = alTop;
+      PnlBody.Height = FormP.clHeight - 70;
+      if (PnlBody.Height < 620)
+      {
+        PnlBody.Height = 620;
+      }
+      PnlBody.Margins.Left   = 12;
+      PnlBody.Margins.Right  = 12;
+      PnlBody.Margins.Top    = 12;
+      PnlBody.Margins.Bottom = 12;
+      PnlBody.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_SURFACE);
+      PnlBody.SetclProSettings(PnlBody.clProSettings);
+
+      // --- Liste karti --------------------------------------------------------
+      Adim = '7: PnlKartListe';
+      PnlKartListe = FormP.AddNewProPanel(PnlBody, 'PnlKartListe');
+      PnlKartListe.Align = alTop;
+      PnlKartListe.Height = 520;
+      PnlKartListe.Margins.Bottom = 12;
+      PnlKartListe.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      PnlKartListe.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      PnlKartListe.clProSettings.BorderWidth = 1;
+      PnlKartListe.clProSettings.IsRound = True;
+      PnlKartListe.clProSettings.RoundHeight = 12;
+      PnlKartListe.clProSettings.RoundWidth = 12;
+      PnlKartListe.SetclProSettings(PnlKartListe.clProSettings);
+
+      LblGorevEyebrow = FormP.AddNewProLabel(PnlKartListe, 'LblGorevEyebrow', 'GOREVLERIM');
+      LblGorevEyebrow.Align = alTop;
+      LblGorevEyebrow.Height = 18;
+      LblGorevEyebrow.Margins.Top    = 14;
+      LblGorevEyebrow.Margins.Left   = 16;
+      LblGorevEyebrow.Margins.Right  = 16;
+      LblGorevEyebrow.Margins.Bottom = 2;
+      LblGorevEyebrow.clProSettings.FontSize = 12;
+      LblGorevEyebrow.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblGorevEyebrow.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblGorevEyebrow.SetclProSettings(LblGorevEyebrow.clProSettings);
+
+      PnlGorevTitleRow = FormP.AddNewProPanel(PnlKartListe, 'PnlGorevTitleRow');
+      PnlGorevTitleRow.Align = alTop;
+      PnlGorevTitleRow.Height = 34;
+      PnlGorevTitleRow.Margins.Left   = 16;
+      PnlGorevTitleRow.Margins.Right  = 16;
+      PnlGorevTitleRow.Margins.Bottom = 8;
+      PnlGorevTitleRow.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      PnlGorevTitleRow.SetclProSettings(PnlGorevTitleRow.clProSettings);
+
+      LblGorevCount = FormP.AddNewProLabel(PnlGorevTitleRow, 'LblGorevCount', '0 gorev');
+      LblGorevCount.Align = alRight;
+      LblGorevCount.Width = 84;
+      LblGorevCount.Height = 32;
+      LblGorevCount.clProSettings.FontSize = 10;
+      LblGorevCount.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblGorevCount.clProSettings.FontHorzAlign = palTrailing;
+      LblGorevCount.clProSettings.FontVertAlign = palCenter;
+      LblGorevCount.SetclProSettings(LblGorevCount.clProSettings);
+
+      LblGorevTitle = FormP.AddNewProLabel(PnlGorevTitleRow, 'LblGorevTitle', 'Atanmis Gorevlerim');
+      LblGorevTitle.Align = alClient;
+      LblGorevTitle.Margins.Right = 8;
+      LblGorevTitle.clProSettings.FontSize = 16;
+      LblGorevTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblGorevTitle.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LblGorevTitle.clProSettings.FontHorzAlign = palLeading;
+      LblGorevTitle.clProSettings.FontVertAlign = palCenter;
+      LblGorevTitle.SetclProSettings(LblGorevTitle.clProSettings);
+
+      PnlSolToolbar = FormP.AddNewProPanel(PnlKartListe, 'PnlSolToolbar');
+      PnlSolToolbar.Align = alTop;
+      PnlSolToolbar.Height = 54;
+      PnlSolToolbar.Margins.Left   = 16;
+      PnlSolToolbar.Margins.Right  = 16;
+      PnlSolToolbar.Margins.Top    = 0;
+      PnlSolToolbar.Margins.Bottom = 8;
+      PnlSolToolbar.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+      PnlSolToolbar.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      PnlSolToolbar.clProSettings.BorderWidth = 1;
+      PnlSolToolbar.clProSettings.IsRound = True;
+      PnlSolToolbar.clProSettings.RoundHeight = 10;
+      PnlSolToolbar.clProSettings.RoundWidth = 10;
+      PnlSolToolbar.SetclProSettings(PnlSolToolbar.clProSettings);
+
+      PnlToolPrefix = FormP.AddNewProPanel(PnlSolToolbar, 'PnlToolPrefix');
+      PnlToolPrefix.Align = alLeft;
+      PnlToolPrefix.Width = 104;
+      PnlToolPrefix.Height = 46;
+      PnlToolPrefix.Margins.Left   = 4;
+      PnlToolPrefix.Margins.Top    = 6;
+      PnlToolPrefix.Margins.Bottom = 6;
+      PnlToolPrefix.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+      PnlToolPrefix.SetclProSettings(PnlToolPrefix.clProSettings);
+
+      BtnYenile = FormP.AddNewProButton(PnlToolPrefix, 'BtnYenile', 'Yenile');
+      BtnYenile.Align = alClient;
+      BtnYenile.Margins.Top = 2;
+      BtnYenile.Margins.Bottom = 2;
+      BtnYenile.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      BtnYenile.clProSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      BtnYenile.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      BtnYenile.clProSettings.BorderWidth = 1;
+      BtnYenile.clProSettings.IsRound = True;
+      BtnYenile.clProSettings.RoundHeight = 10;
+      BtnYenile.clProSettings.RoundWidth = 10;
+      BtnYenile.SetclProSettings(BtnYenile.clProSettings);
+      FormP.AddNewEvent(BtnYenile, tbeOnClick, 'GorevleriYenileBaslat');
+
+      EdtGorevAra = FormP.AddNewProEdit(PnlSolToolbar, 'EdtGorevAra', '');
+      EdtGorevAra.Align = alClient;
+      EdtGorevAra.Height = 38;
+      EdtGorevAra.Margins.Left = 8;
+      EdtGorevAra.Margins.Right = 8;
+      EdtGorevAra.Margins.Top = 8;
+      EdtGorevAra.Margins.Bottom = 8;
+      EdtGorevAra.Padding.Left = 10;
+      EdtGorevAra.Padding.Right = 10;
+      EdtGorevAra.TextPrompt = 'Numara, baslik veya konum';
+      EdtGorevAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      EdtGorevAra.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      EdtGorevAra.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      EdtGorevAra.clProSettings.BorderWidth = 1;
+      EdtGorevAra.clProSettings.IsRound = True;
+      EdtGorevAra.clProSettings.RoundHeight = 10;
+      EdtGorevAra.clProSettings.RoundWidth = 10;
+      EdtGorevAra.clProSettings.FontSize = 13;
+      EdtGorevAra.SetclProSettings(EdtGorevAra.clProSettings);
+      FormP.AddNewEvent(EdtGorevAra, tbeOnChange, 'GorevAramaDegisti');
+
+      PnlAraSutun = FormP.AddNewProPanel(PnlSolToolbar, 'PnlAraSutun');
+      PnlAraSutun.Align = alRight;
+      PnlAraSutun.Width = 52;
+      PnlAraSutun.Margins.Left = 0;
+      PnlAraSutun.Margins.Top = 6;
+      PnlAraSutun.Margins.Bottom = 6;
+      PnlAraSutun.Margins.Right = 6;
+      PnlAraSutun.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY_BG);
+      PnlAraSutun.SetclProSettings(PnlAraSutun.clProSettings);
+
+      BtnGorevAra = FormP.AddNewProButton(PnlAraSutun, 'BtnGorevAra', 'Ara');
+      BtnGorevAra.Align = alClient;
+      BtnGorevAra.Margins.Left = 2;
+      BtnGorevAra.Margins.Right = 2;
+      BtnGorevAra.Margins.Top = 4;
+      BtnGorevAra.Margins.Bottom = 4;
+      BtnGorevAra.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      BtnGorevAra.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      BtnGorevAra.clProSettings.BorderWidth = 0;
+      BtnGorevAra.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+      BtnGorevAra.clProSettings.FontSize = 12;
+      BtnGorevAra.clProSettings.TextSettings.Font.Style = [fsBold];
+      BtnGorevAra.clProSettings.FontHorzAlign = palCenter;
+      BtnGorevAra.clProSettings.FontVertAlign = palCenter;
+      BtnGorevAra.clProSettings.IsRound = True;
+      BtnGorevAra.clProSettings.RoundHeight = 12;
+      BtnGorevAra.clProSettings.RoundWidth = 12;
+      BtnGorevAra.SetclProSettings(BtnGorevAra.clProSettings);
+      FormP.AddNewEvent(BtnGorevAra, tbeOnClick, 'GorevAramaDegisti');
+
+      Adim = '8: PnlListHost';
+      PnlListHost = FormP.AddNewProPanel(PnlKartListe, 'PnlListHost');
+      PnlListHost.Align = alTop;
+      PnlListHost.Height = 320;
+      PnlListHost.Margins.Left   = 16;
+      PnlListHost.Margins.Right  = 16;
+      PnlListHost.Margins.Top    = 0;
+      PnlListHost.Margins.Bottom = 12;
+      PnlListHost.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_INSET);
+      PnlListHost.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      PnlListHost.clProSettings.BorderWidth = 1;
+      PnlListHost.clProSettings.IsRound = True;
+      PnlListHost.clProSettings.RoundHeight = 10;
+      PnlListHost.clProSettings.RoundWidth = 10;
+      PnlListHost.SetclProSettings(PnlListHost.clProSettings);
+
+      Adim = '9: LbGorevler TclProListView';
+      LbGorevler = FormP.AddNewProListView(PnlListHost, 'LbGorevler');
+      LbGorevler.Align = alClient;
+      LbGorevler.Margins.Left   = 8;
+      LbGorevler.Margins.Right  = 8;
+      LbGorevler.Margins.Top    = 8;
+      LbGorevler.Margins.Bottom = 8;
+      LbGorevler.clProSettings.ViewType = lvWaterFall;
+      LbGorevler.clProSettings.IsRound = True;
+      LbGorevler.clProSettings.IsFill = True;
+      LbGorevler.clProSettings.ColCount = 1;
+      LbGorevler.clProSettings.ItemHeight = 128;
+      LbGorevler.clProSettings.ItemSpace = 8;
+      LbGorevler.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_INSET);
+      LbGorevler.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      LbGorevler.clProSettings.BorderWidth = 1;
+      LbGorevler.clProSettings.RoundWidth = 8;
+      LbGorevler.clProSettings.RoundHeight = 8;
+      LbGorevler.SetclProSettings(LbGorevler.clProSettings);
+
+      LvDesigner = FormP.AddNewProListViewDesignerPanel(LbGorevler, 'LvDesigner');
+      LvDesigner.Align = alTop;
+      LvDesigner.Height = 118;
+      LvDesigner.Width = 352;
+      LvDesigner.Margins.Left = 0;
+      LvDesigner.Margins.Right = 0;
+      LvDesigner.clProSettings.IsRound = True;
+      LvDesigner.clProSettings.IsFill = True;
+      LvDesigner.clProSettings.ItemHeight = 128;
+      LvDesigner.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvDesigner.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      LvDesigner.clProSettings.BorderWidth = 1;
+      LvDesigner.clProSettings.RoundWidth = 10;
+      LvDesigner.clProSettings.RoundHeight = 10;
+      LvDesigner.SetclProSettings(LvDesigner.clProSettings);
+      LbGorevler.SetDesignerPanel(LvDesigner);
+      FormP.AddNewEvent(LbGorevler, tbeOnItemClick, 'GorevSecildi');
+
+      LvLMain = FormP.AddNewProLabel(LvDesigner, 'MAIN_TEXT', '{MAIN_TEXT}');
+      LvLMain.Align = alMostTop;
+      LvLMain.Height = 38;
+      LvLMain.Margins.Top = 8;
+      LvLMain.Margins.Left = 12;
+      LvLMain.Margins.Right = 12;
+      LvLMain.clProSettings.FontSize = 14;
+      LvLMain.clProSettings.TextSettings.Font.Style = [fsBold];
+      LvLMain.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LvLMain.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LvLMain.clProSettings.IsTransparent = False;
+      LvLMain.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLMain.clProSettings.FontVertAlign = palCenter;
+      LvLMain.clProSettings.FontHorzAlign = palLeading;
+      LvLMain.clProSettings.WordWrap = True;
+      LvLMain.SetclProSettings(LvLMain.clProSettings);
+      LvDesigner.AddPanelObject(LvLMain, clCaption);
+
+      LvLSub = FormP.AddNewProLabel(LvDesigner, 'SUB_TEXT', '{SUB_TEXT}');
+      LvLSub.Align = alMostTop;
+      LvLSub.Height = 28;
+      LvLSub.Margins.Top = 4;
+      LvLSub.Margins.Left = 12;
+      LvLSub.Margins.Right = 12;
+      LvLSub.clProSettings.FontSize = 12;
+      LvLSub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LvLSub.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LvLSub.clProSettings.IsTransparent = False;
+      LvLSub.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLSub.clProSettings.WordWrap = True;
+      LvLSub.SetclProSettings(LvLSub.clProSettings);
+      LvDesigner.AddPanelObject(LvLSub, clText);
+
+      LvLFoot = FormP.AddNewProLabel(LvDesigner, 'FOOTER_TEXT', '{FOOTER_TEXT}');
+      LvLFoot.Align = alMostTop;
+      LvLFoot.Height = 22;
+      LvLFoot.Margins.Top = 4;
+      LvLFoot.Margins.Left = 12;
+      LvLFoot.Margins.Right = 12;
+      LvLFoot.clProSettings.FontSize = 11;
+      LvLFoot.clProSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      LvLFoot.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor(C_PRIMARY);
+      LvLFoot.clProSettings.IsTransparent = False;
+      LvLFoot.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      LvLFoot.SetclProSettings(LvLFoot.clProSettings);
+      LvDesigner.AddPanelObject(LvLFoot, clText1);
+
+      Adim = '10: PnlEmptyState';
+      PnlEmptyState = FormP.AddNewProPanel(PnlListHost, 'PnlEmptyState');
+      PnlEmptyState.Align = alClient;
+      PnlEmptyState.Margins.Left   = 12;
+      PnlEmptyState.Margins.Right  = 12;
+      PnlEmptyState.Margins.Top    = 12;
+      PnlEmptyState.Margins.Bottom = 12;
+      PnlEmptyState.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      PnlEmptyState.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      PnlEmptyState.clProSettings.BorderWidth = 1;
+      PnlEmptyState.clProSettings.IsRound = True;
+      PnlEmptyState.clProSettings.RoundHeight = 12;
+      PnlEmptyState.clProSettings.RoundWidth = 12;
+      PnlEmptyState.SetclProSettings(PnlEmptyState.clProSettings);
+
+      PnlEmptyCenter = FormP.AddNewProPanel(PnlEmptyState, 'PnlEmptyCenter');
+      PnlEmptyCenter.Align = alTop;
+      PnlEmptyCenter.Height = 168;
+      PnlEmptyCenter.Margins.Left  = 10;
+      PnlEmptyCenter.Margins.Right = 10;
+      PnlEmptyCenter.Margins.Top   = 12;
+      PnlEmptyCenter.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      PnlEmptyCenter.SetclProSettings(PnlEmptyCenter.clProSettings);
+
+      ImgEmpty = FormP.AddNewProImage(PnlEmptyCenter, 'ImgEmpty');
+      ImgEmpty.Visible = False;
+      ImgEmpty.Height = 0;
+      ImgEmpty.Width = 0;
+
+      LblEmptyTitle = FormP.AddNewProLabel(PnlEmptyCenter, 'LblEmptyTitle', 'Atanmis gorev yok');
+      LblEmptyTitle.Align = alTop;
+      LblEmptyTitle.Height = 30;
+      LblEmptyTitle.Margins.Top   = 22;
+      LblEmptyTitle.Margins.Left  = 12;
+      LblEmptyTitle.Margins.Right = 12;
+      LblEmptyTitle.clProSettings.FontSize = 15;
+      LblEmptyTitle.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblEmptyTitle.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      LblEmptyTitle.clProSettings.FontHorzAlign = palCenter;
+      LblEmptyTitle.clProSettings.WordWrap = True;
+      LblEmptyTitle.SetclProSettings(LblEmptyTitle.clProSettings);
+
+      LblEmptySub = FormP.AddNewProLabel(PnlEmptyCenter, 'LblEmptySub',
+        'Yenile ile listeyi guncelleyin. Arama kutusu ile filtreleyebilirsiniz.');
+      LblEmptySub.Align = alTop;
+      LblEmptySub.Height = 56;
+      LblEmptySub.Margins.Left   = 14;
+      LblEmptySub.Margins.Right  = 14;
+      LblEmptySub.Margins.Top    = 8;
+      LblEmptySub.clProSettings.FontSize = 12;
+      LblEmptySub.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblEmptySub.clProSettings.FontHorzAlign = palCenter;
+      LblEmptySub.clProSettings.WordWrap = True;
+      LblEmptySub.SetclProSettings(LblEmptySub.clProSettings);
+
+      LbGorevler.Visible = False;
+      PnlEmptyState.Visible = True;
+
+      // --- Aksiyon karti ------------------------------------------------------
+      Adim = '11: PnlKartAksiyon';
+      PnlKartAksiyon = FormP.AddNewProPanel(PnlBody, 'PnlKartAksiyon');
+      PnlKartAksiyon.Align = alTop;
+      PnlKartAksiyon.Height = 340;
+      PnlKartAksiyon.Margins.Bottom = 8;
+      PnlKartAksiyon.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      PnlKartAksiyon.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      PnlKartAksiyon.clProSettings.BorderWidth = 1;
+      PnlKartAksiyon.clProSettings.IsRound = True;
+      PnlKartAksiyon.clProSettings.RoundHeight = 12;
+      PnlKartAksiyon.clProSettings.RoundWidth = 12;
+      PnlKartAksiyon.SetclProSettings(PnlKartAksiyon.clProSettings);
+
+      LblAksiyonEyebrow = FormP.AddNewProLabel(PnlKartAksiyon, 'LblAksiyonEyebrow', 'DURUM GUNCELLE');
+      LblAksiyonEyebrow.Align = alTop;
+      LblAksiyonEyebrow.Height = 18;
+      LblAksiyonEyebrow.Margins.Top    = 14;
+      LblAksiyonEyebrow.Margins.Left   = 16;
+      LblAksiyonEyebrow.Margins.Right  = 16;
+      LblAksiyonEyebrow.Margins.Bottom = 4;
+      LblAksiyonEyebrow.clProSettings.FontSize = 12;
+      LblAksiyonEyebrow.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblAksiyonEyebrow.clProSettings.TextSettings.Font.Style = [fsBold];
+      LblAksiyonEyebrow.SetclProSettings(LblAksiyonEyebrow.clProSettings);
+
+      LblSecili = FormP.AddNewProLabel(PnlKartAksiyon, 'LblSecili', 'Gorev secilmedi');
+      LblSecili.Align = alTop;
+      LblSecili.Height = 26;
+      LblSecili.Margins.Left   = 16;
+      LblSecili.Margins.Right  = 16;
+      LblSecili.Margins.Top    = 2;
+      LblSecili.clProSettings.FontSize = 12;
+      LblSecili.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblSecili.SetclProSettings(LblSecili.clProSettings);
+
+      LblDurum = FormP.AddNewProLabel(PnlKartAksiyon, 'LblDurum', '');
+      LblDurum.Align = alTop;
+      LblDurum.Height = 52;
+      LblDurum.Margins.Left   = 16;
+      LblDurum.Margins.Right  = 16;
+      LblDurum.Margins.Top    = 4;
+      LblDurum.clProSettings.FontSize = 11;
+      LblDurum.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblDurum.clProSettings.WordWrap = True;
+      LblDurum.SetclProSettings(LblDurum.clProSettings);
+
+      EdtNot = FormP.AddNewProEdit(PnlKartAksiyon, 'EdtNot', '');
+      EdtNot.Align  = alTop;
+      EdtNot.Height = 44;
+      EdtNot.Margins.Left   = 16;
+      EdtNot.Margins.Right  = 16;
+      EdtNot.Margins.Top    = 8;
+      EdtNot.Margins.Bottom = 8;
+      EdtNot.TextPrompt = 'Not (opsiyonel)';
+      EdtNot.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+      EdtNot.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+      EdtNot.clProSettings.BorderWidth = 1;
+      EdtNot.clProSettings.IsRound = True;
+      EdtNot.clProSettings.RoundHeight = 10;
+      EdtNot.clProSettings.RoundWidth = 10;
+      EdtNot.SetclProSettings(EdtNot.clProSettings);
+
+      BtnYolda = FormP.AddNewProButton(PnlKartAksiyon, 'BtnYolda', 'Yola Cik');
+      BtnYolda.Align = alTop;
+      BtnYolda.Height = 48;
+      BtnYolda.Margins.Left   = 16;
+      BtnYolda.Margins.Right  = 16;
+      BtnYolda.Margins.Top    = 12;
+      BtnYolda.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BTN_YOLDA);
+      BtnYolda.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+      BtnYolda.clProSettings.BorderWidth = 0;
+      BtnYolda.clProSettings.IsRound = True;
+      BtnYolda.clProSettings.RoundHeight = 10;
+      BtnYolda.clProSettings.RoundWidth = 10;
+      BtnYolda.SetclProSettings(BtnYolda.clProSettings);
+      FormP.AddNewEvent(BtnYolda, tbeOnClick, 'YoldaClick');
+
+      BtnIslemde = FormP.AddNewProButton(PnlKartAksiyon, 'BtnIslemde', 'Islemde');
+      BtnIslemde.Align = alTop;
+      BtnIslemde.Height = 48;
+      BtnIslemde.Margins.Left   = 16;
+      BtnIslemde.Margins.Right  = 16;
+      BtnIslemde.Margins.Top    = 10;
+      BtnIslemde.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BTN_ISLEM);
+      BtnIslemde.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+      BtnIslemde.clProSettings.BorderWidth = 0;
+      BtnIslemde.clProSettings.IsRound = True;
+      BtnIslemde.clProSettings.RoundHeight = 10;
+      BtnIslemde.clProSettings.RoundWidth = 10;
+      BtnIslemde.SetclProSettings(BtnIslemde.clProSettings);
+      FormP.AddNewEvent(BtnIslemde, tbeOnClick, 'IslemdeClick');
+
+      BtnBeklemede = FormP.AddNewProButton(PnlKartAksiyon, 'BtnBeklemede', 'Beklet');
+      BtnBeklemede.Align = alTop;
+      BtnBeklemede.Height = 48;
+      BtnBeklemede.Margins.Left   = 16;
+      BtnBeklemede.Margins.Right  = 16;
+      BtnBeklemede.Margins.Top    = 10;
+      BtnBeklemede.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BTN_BEK);
+      BtnBeklemede.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+      BtnBeklemede.clProSettings.BorderWidth = 0;
+      BtnBeklemede.clProSettings.IsRound = True;
+      BtnBeklemede.clProSettings.RoundHeight = 10;
+      BtnBeklemede.clProSettings.RoundWidth = 10;
+      BtnBeklemede.SetclProSettings(BtnBeklemede.clProSettings);
+      FormP.AddNewEvent(BtnBeklemede, tbeOnClick, 'BeklemedeClick');
+
+      BtnTamam = FormP.AddNewProButton(PnlKartAksiyon, 'BtnTamam', 'Tamamla');
+      BtnTamam.Align = alTop;
+      BtnTamam.Height = 48;
+      BtnTamam.Margins.Left   = 16;
+      BtnTamam.Margins.Right  = 16;
+      BtnTamam.Margins.Top    = 10;
+      BtnTamam.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_BTN_TAMAM);
+      BtnTamam.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+      BtnTamam.clProSettings.BorderWidth = 0;
+      BtnTamam.clProSettings.IsRound = True;
+      BtnTamam.clProSettings.RoundHeight = 10;
+      BtnTamam.clProSettings.RoundWidth = 10;
+      BtnTamam.SetclProSettings(BtnTamam.clProSettings);
+      FormP.AddNewEvent(BtnTamam, tbeOnClick, 'TamamlandiClick');
+
+      LblMsg = FormP.AddNewProLabel(PnlKartAksiyon, 'LblMsg', '');
+      LblMsg.Align = alTop;
+      LblMsg.Height = 0;
+      LblMsg.Margins.Left   = 16;
+      LblMsg.Margins.Right  = 16;
+      LblMsg.Margins.Top    = 8;
+      LblMsg.Margins.Bottom = 12;
+      LblMsg.clProSettings.FontHorzAlign = palCenter;
+      LblMsg.clProSettings.FontSize = 11;
+      LblMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+      LblMsg.clProSettings.WordWrap = True;
+      LblMsg.SetclProSettings(LblMsg.clProSettings);
+
+      Adim = '12: UygulaResponsiveSaha ilk';
+      UygulaResponsiveSaha;
+
+      Adim = '13: TmrYerlesim';
+      TmrYerlesim = FormP.AddNewTimer(FormP, 'TmrYerlesim', 200);
+      FormP.AddNewEvent(TmrYerlesim, tbeOnTimer, 'YerlesimLayoutTick');
+      TmrYerlesim.Enabled = True;
+
+      Adim = '14: FormP.Run';
+      FormP.Run;
+
+    except
+      ShowMessage('Personel ekrani hatasi (adim ' + Adim + '): ' +
+                  LastExceptionClassName + ' / ' + LastExceptionMessage);
+    }
+  }

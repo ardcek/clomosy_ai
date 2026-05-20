@@ -1,0 +1,393 @@
+// =============================================================================
+// uSahaPersoneli.tro  -  SAHA PERSONELI EKRANI
+// -----------------------------------------------------------------------------
+// SahaPersoneli rolundeki kullanici icin:
+//   - Kendisine atanmis aktif islerin listesi
+//   - Bir kaydi sectikten sonra durum gecisi butonlari:
+//       Atandi    -> Yolda
+//       Yolda     -> Islemde
+//       Islemde   -> Beklemede | Tamamlandi
+//       Beklemede -> Islemde   | Tamamlandi
+//   - Buton clTagStr'i hedef durumu icerir; tek handler bunu okur ve
+//     IsValidTransition kontrolu yapar.
+//
+// Stil: Resmi {} stili.
+// =============================================================================
+
+
+// ================================ [SABITLER] =================================
+
+const
+  DURUM_ATANDI      = 'Atandi';
+  DURUM_YOLDA       = 'Yolda';
+  DURUM_ISLEMDE     = 'Islemde';
+  DURUM_BEKLEMEDE   = 'Beklemede';
+  DURUM_TAMAMLANDI  = 'Tamamlandi';
+  ROL_SAHA          = 'SahaPersoneli';
+  DB_DOSYA          = 'arzpf.db';
+
+
+// =============================== [GLOBAL VAR] ================================
+
+var
+  Form1            : TclForm;
+  PnlUst           : TclProPanel;
+  PnlAlt           : TclProPanel;
+  PnlButonlar      : TclProPanel;
+  LblBaslik        : TclProLabel;
+  LblHosgeldin     : TclProLabel;
+  LblSecili        : TclProLabel;
+
+  LvIsler          : TclProListView;
+
+  EdtTicketId      : TclProEdit;
+  EdtNot           : TclProEdit;
+
+  BtnYolda         : TclProButton;
+  BtnIslemde       : TclProButton;
+  BtnBeklemede     : TclProButton;
+  BtnTamamlandi    : TclProButton;
+  BtnYenile        : TclProButton;
+
+
+// =============================== [HELPERS] ===================================
+
+function NowIso : String;
+{
+  Result = FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', Now);
+}
+
+function YeniGuid : String;
+var s : String;
+{
+  s = Clomosy.NewGUID;
+  if (s == '')
+  {
+    s = 'ID-' + IntToStr(DateTimeToUnix(Now)) + '-' + IntToStr(Random(1000000));
+  }
+  Result = s;
+}
+
+void DBBaglan;
+{
+  Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + DB_DOSYA, '');
+}
+
+void DBExec(Sql : String);
+{
+  Clomosy.DBSQLiteQuery.Sql.Text = Sql;
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+}
+
+function DBOkuStr(Sql : String; AlanAdi : String) : String;
+var Q : TClSQLiteQuery;
+{
+  Q = Clomosy.DBSQLiteQueryWith(Sql);
+  Q.OpenOrExecute;
+  if not Q.Eof
+  {
+    Result = Q.FieldByName(AlanAdi).AsString;
+  }
+  else
+  {
+    Result = '';
+  }
+}
+
+
+// =========================== [IS MANTIGI] ====================================
+
+function IsValidTransition(F : String; T : String) : Boolean;
+{
+  if (F == DURUM_ATANDI)
+  {
+    Result = (T == DURUM_YOLDA);
+  }
+  else if (F == DURUM_YOLDA)
+  {
+    Result = (T == DURUM_ISLEMDE);
+  }
+  else if (F == DURUM_ISLEMDE)
+  {
+    Result = (T == DURUM_BEKLEMEDE) || (T == DURUM_TAMAMLANDI);
+  }
+  else if (F == DURUM_BEKLEMEDE)
+  {
+    Result = (T == DURUM_ISLEMDE) || (T == DURUM_TAMAMLANDI);
+  }
+  else
+  {
+    Result = false;
+  }
+}
+
+
+// ============================= [LISTE YUKLE] =================================
+
+void ListeyiYenile;
+var
+  guid : String;
+  sql  : String;
+{
+  guid = Clomosy.AppUserGUID;
+  sql  = 'SELECT id as RECORD_GUID, ticket_no as MAIN_TEXT, ' +
+         'baslik as DETAIL_TEXT, durum as FOOTER_TEXT ' +
+         'FROM tickets WHERE atanan_personel_id = ' + QuotedStr(guid) +
+         " AND durum <> 'Tamamlandi'" +
+         ' ORDER BY created_at DESC LIMIT 100';
+  LvIsler.LoadDataFromSql(sql);
+}
+
+
+// =========================== [HANDLER: LISTE TIKLA] ==========================
+
+void LvItemClick;
+var sec : String;
+{
+  sec = LvIsler.SelectedItemRecordGuid;
+  if (sec <> '')
+  {
+    EdtTicketId.Text = sec;
+    LblSecili.Text = 'Secili: ' + sec;
+  }
+}
+
+
+// =========================== [HANDLER: DURUM GUNCEL] =========================
+
+void DurumGuncelleHandler;
+var
+  clickedBtn   : TclProButton;
+  yeniDurum    : String;
+  ticketId     : String;
+  not_         : String;
+  personelGuid : String;
+  mevcutDurum  : String;
+  mevcutAtanan : String;
+  ok           : Boolean;
+{
+  clickedBtn   = TClProButton(Form1.Clsender);
+  yeniDurum    = clickedBtn.clTagStr;
+  ticketId     = Trim(EdtTicketId.Text);
+  not_         = Trim(EdtNot.Text);
+  personelGuid = Clomosy.AppUserGUID;
+  ok           = true;
+
+  if (ticketId == '')
+  {
+    ShowMessage('Once listeden bir is secin.');
+    ok = false;
+  }
+
+  if (ok)
+  {
+    mevcutDurum  = DBOkuStr(
+      'SELECT durum FROM tickets WHERE id = ' + QuotedStr(ticketId),
+      'durum'
+    );
+    mevcutAtanan = DBOkuStr(
+      'SELECT atanan_personel_id FROM tickets WHERE id = ' + QuotedStr(ticketId),
+      'atanan_personel_id'
+    );
+
+    if (mevcutDurum == '')
+    {
+      ShowMessage('Talep bulunamadi.');
+      ok = false;
+    }
+    else if (mevcutAtanan <> personelGuid)
+    {
+      ShowMessage('Bu talep size atanmamis.');
+      ok = false;
+    }
+    else if (not IsValidTransition(mevcutDurum, yeniDurum))
+    {
+      ShowMessage('Gecersiz durum gecisi: ' + mevcutDurum + ' -> ' + yeniDurum);
+      ok = false;
+    }
+  }
+
+  if (ok)
+  {
+    DBExec(
+      'UPDATE tickets SET ' +
+      '  durum      = ' + QuotedStr(yeniDurum) + ',' +
+      '  updated_at = ' + QuotedStr(NowIso) +
+      ' WHERE id = '    + QuotedStr(ticketId)
+    );
+
+    DBExec(
+      'INSERT INTO ticket_events (id, ticket_id, from_status, to_status, changed_by, changed_at, note) VALUES (' +
+      QuotedStr(YeniGuid)     + ',' +
+      QuotedStr(ticketId)     + ',' +
+      QuotedStr(mevcutDurum)  + ',' +
+      QuotedStr(yeniDurum)    + ',' +
+      QuotedStr(personelGuid) + ',' +
+      QuotedStr(NowIso)       + ',' +
+      QuotedStr(not_)         + ')'
+    );
+
+    ShowMessage('Durum guncellendi: ' + mevcutDurum + ' -> ' + yeniDurum);
+    EdtNot.Text = '';
+    ListeyiYenile;
+  }
+}
+
+
+// =========================== [HANDLER: YENILE] ===============================
+
+void YenileClick;
+{
+  ListeyiYenile;
+}
+
+
+// =============================== [STIL HELPER] ===============================
+
+void EditStilUygula(E : TclProEdit);
+{
+  E.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  E.clProSettings.BorderColor     = clAlphaColor.clHexToColor('#1e3c72');
+  E.clProSettings.BorderWidth     = 1;
+  E.clProSettings.RoundHeight     = 14;
+  E.clProSettings.RoundWidth      = 14;
+  E.clProSettings.IsRound         = True;
+  E.SetclProSettings(E.clProSettings);
+}
+
+void ButonStilUygula(B : TclProButton; HexBg : String);
+{
+  B.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(HexBg);
+  B.clProSettings.BorderWidth     = 0;
+  B.clProSettings.RoundHeight     = 14;
+  B.clProSettings.RoundWidth      = 14;
+  B.clProSettings.IsRound         = True;
+  B.clProSettings.TextSettings.Font.Style = [fsBold];
+  B.clProSettings.TextSettings.FontColor  = clAlphaColor.clHexToColor('#FFFFFF');
+  B.SetclProSettings(B.clProSettings);
+}
+
+
+// =============================== [ANA AKIS] ==================================
+
+{
+  try
+    DBBaglan;
+
+    Form1 = TclForm.Create(Self);
+    Form1.SetFormColor('#1e3c72', '#2a5298', clGVertical);
+    Form1.clsetCaption('Saha Personeli - Isler');
+
+    LblBaslik = Form1.AddNewProLabel(Form1, 'LblBaslik', 'ATANAN ISLERIM');
+    LblBaslik.Align = alTop;
+    LblBaslik.Height = 48;
+    LblBaslik.Margins.Top = 12;
+    LblBaslik.clProSettings.TextSettings.Font.Size  = 18;
+    LblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblBaslik.clProSettings.TextSettings.FontColor  = clAlphaColor.clHexToColor('#FFFFFF');
+    LblBaslik.clProSettings.TextSettings.HorzAlign  = TTextAlign.Center;
+    LblBaslik.SetclProSettings(LblBaslik.clProSettings);
+
+    LblHosgeldin = Form1.AddNewProLabel(Form1, 'LblHosgeldin',
+      'Hosgeldiniz, ' + Clomosy.AppUserDisplayName);
+    LblHosgeldin.Align = alTop;
+    LblHosgeldin.Height = 24;
+    LblHosgeldin.clProSettings.TextSettings.Font.Size = 12;
+    LblHosgeldin.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor('#E6E6E6');
+    LblHosgeldin.clProSettings.TextSettings.HorzAlign = TTextAlign.Center;
+    LblHosgeldin.SetclProSettings(LblHosgeldin.clProSettings);
+
+    // ---- Ust panel: Liste ----------------------------------------------
+    PnlUst = Form1.AddNewProPanel(Form1, 'PnlUst');
+    PnlUst.Align = alClient;
+    PnlUst.Margins.Left   = 16;
+    PnlUst.Margins.Right  = 16;
+    PnlUst.Margins.Top    = 8;
+    PnlUst.clProSettings.BackgroundColor = nil;
+    PnlUst.SetclProSettings(PnlUst.clProSettings);
+
+    BtnYenile = Form1.AddNewProButton(PnlUst, 'BtnYenile', 'Listeyi Yenile');
+    BtnYenile.Align = alTop;
+    BtnYenile.Height = 40;
+    ButonStilUygula(BtnYenile, '#6a8eae');
+    Form1.AddNewEvent(BtnYenile, tbeOnClick, 'YenileClick');
+
+    LvIsler = Form1.AddNewProListView(PnlUst, 'LvIsler');
+    LvIsler.Align = alClient;
+    LvIsler.Margins.Top = 8;
+    Form1.AddNewEvent(LvIsler, tbeOnItemClick, 'LvItemClick');
+
+    // ---- Alt panel: Durum guncelle -------------------------------------
+    PnlAlt = Form1.AddNewProPanel(Form1, 'PnlAlt');
+    PnlAlt.Align = alBottom;
+    PnlAlt.Height = 280;
+    PnlAlt.Margins.Left   = 16;
+    PnlAlt.Margins.Right  = 16;
+    PnlAlt.Margins.Bottom = 16;
+    PnlAlt.clProSettings.BackgroundColor = nil;
+    PnlAlt.SetclProSettings(PnlAlt.clProSettings);
+
+    LblSecili = Form1.AddNewProLabel(PnlAlt, 'LblSecili', 'Secili: -');
+    LblSecili.Align = alTop;
+    LblSecili.Height = 24;
+    LblSecili.clProSettings.TextSettings.Font.Size = 12;
+    LblSecili.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor('#E6E6E6');
+    LblSecili.SetclProSettings(LblSecili.clProSettings);
+
+    EdtTicketId = Form1.AddNewProEdit(PnlAlt, 'EdtTicketId', 'Talep ID (listeden secebilirsiniz)');
+    EdtTicketId.Align = alTop;
+    EdtTicketId.Height = 44;
+    EdtTicketId.Margins.Top = 8;
+    EditStilUygula(EdtTicketId);
+
+    EdtNot = Form1.AddNewProEdit(PnlAlt, 'EdtNot', 'Not (opsiyonel)');
+    EdtNot.Align = alTop;
+    EdtNot.Height = 44;
+    EdtNot.Margins.Top = 8;
+    EditStilUygula(EdtNot);
+
+    PnlButonlar = Form1.AddNewProPanel(PnlAlt, 'PnlButonlar');
+    PnlButonlar.Align = alTop;
+    PnlButonlar.Height = 56;
+    PnlButonlar.Margins.Top = 12;
+    PnlButonlar.clProSettings.BackgroundColor = nil;
+    PnlButonlar.SetclProSettings(PnlButonlar.clProSettings);
+
+    BtnYolda = Form1.AddNewProButton(PnlButonlar, 'BtnYolda', 'Yolda');
+    BtnYolda.Align = alLeft;
+    BtnYolda.Width = 120;
+    BtnYolda.Margins.Right = 6;
+    BtnYolda.clTagStr = DURUM_YOLDA;
+    ButonStilUygula(BtnYolda, '#3aafa9');
+    Form1.AddNewEvent(BtnYolda, tbeOnClick, 'DurumGuncelleHandler');
+
+    BtnIslemde = Form1.AddNewProButton(PnlButonlar, 'BtnIslemde', 'Islemde');
+    BtnIslemde.Align = alLeft;
+    BtnIslemde.Width = 120;
+    BtnIslemde.Margins.Right = 6;
+    BtnIslemde.clTagStr = DURUM_ISLEMDE;
+    ButonStilUygula(BtnIslemde, '#f08a5d');
+    Form1.AddNewEvent(BtnIslemde, tbeOnClick, 'DurumGuncelleHandler');
+
+    BtnBeklemede = Form1.AddNewProButton(PnlButonlar, 'BtnBeklemede', 'Beklemede');
+    BtnBeklemede.Align = alLeft;
+    BtnBeklemede.Width = 120;
+    BtnBeklemede.Margins.Right = 6;
+    BtnBeklemede.clTagStr = DURUM_BEKLEMEDE;
+    ButonStilUygula(BtnBeklemede, '#a32d0f');
+    Form1.AddNewEvent(BtnBeklemede, tbeOnClick, 'DurumGuncelleHandler');
+
+    BtnTamamlandi = Form1.AddNewProButton(PnlButonlar, 'BtnTamamlandi', 'Tamamlandi');
+    BtnTamamlandi.Align = alRight;
+    BtnTamamlandi.Width = 140;
+    BtnTamamlandi.clTagStr = DURUM_TAMAMLANDI;
+    ButonStilUygula(BtnTamamlandi, '#1d8348');
+    Form1.AddNewEvent(BtnTamamlandi, tbeOnClick, 'DurumGuncelleHandler');
+
+    ListeyiYenile;
+
+    Form1.Run;
+
+  except
+    ShowMessage('uSahaPersoneli hatasi: ' + LastExceptionClassName + ' / ' + LastExceptionMessage);
+}

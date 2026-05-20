@@ -1,0 +1,749 @@
+// =============================================================================
+// uLogin.tro  -  GIRIS EKRANI
+// -----------------------------------------------------------------------------
+// AKIS:
+//   1) Kullanici email + sifre girer.
+//   2) Firebase Identity Toolkit signInWithPassword endpoint'i cagrilir.
+//   3) Donen idToken + localId (uid) Clomosy.GlobalVariableString ile saklanir.
+//   4) RTDB users/<uid> okunur -> rol, adSoyad, email yine globale yazilir.
+//   5) Rol'e gore uTalepAcma / uYoneticiAtama / uSahaPersoneli birimine atlanir.
+// =============================================================================
+
+
+// ============================== [TASARIM TOKEN] ==============================
+// uTalepAcma / uSahaPersoneli ile ayni palet
+
+const
+  C_SURFACE     = '#F8FAFC';
+  C_CARD        = '#FFFFFF';
+  C_INSET       = '#F1F5F9';
+  C_BORDER      = '#E2E8F0';
+  C_PRIMARY     = '#2563EB';
+  C_PRIMARY_BG  = '#EFF6FF';
+  C_DANGER      = '#EF4444';
+  C_DANGER_BG   = '#FEF2F2';
+  C_SUCCESS     = '#10B981';
+  C_TEXT        = '#0F172A';
+  C_MUTED       = '#64748B';
+  C_ON_SOLID    = '#FFFFFF';
+  C_HEADER_BAR  = '#EFF6FF';
+  C_MUTED_BG    = '#EEF2FF';
+  C_BODY_END    = '#E8EDF5';
+  C_BREAK_NARROW = 760;
+  C_SAFE_BOTTOM  = 40;
+  C_KART_MAX_W   = 400;
+
+
+// ============================ [GLOBAL VAR] ===================================
+
+var
+  FormLogin   : TclForm;
+  PnlBody     : TclProPanel;
+  PnlKart     : TclProPanel;
+  LblEyebrow  : TclProLabel;
+  LblBaslik   : TclProLabel;
+  LblAltMetin : TclProLabel;
+  LblEmail    : TclProLabel;
+  EdtEmail    : TclProEdit;
+  LblSifre    : TclProLabel;
+  EdtSifre    : TclProEdit;
+  BtnGiris    : TclProButton;
+  LblHataMsg  : TclProLabel;
+  Adim        : String;
+  TmrYerlesim : TClTimer;
+
+
+// ============================ [SNIPPET: uRtdb] ===============================
+// Kaynak: app/lib/uRtdb.tro - asagiya inline kopyalandi.
+
+// ============================ [SNIPPET: Session] =============================
+// Clomosy.GlobalVariableString TEK scalar slot. Coklu key icin pipe ayrim:
+//   |Token=...|UserId=...|AdSoyad=...|
+
+function SessionGet(key : String) : String;
+var
+  s, marker, rest : String;
+{
+  s = Clomosy.GlobalVariableString;
+  marker = '|' + key + '=';
+  if (Pos(marker, s) > 0)
+  {
+    rest = clGetStringAfter(s, marker);
+    Result = clGetStringTo(rest, '|');
+  }
+  else
+  {
+    Result = '';
+  }
+}
+
+void SessionSet(key : String; value : String);
+var
+  s, marker, before, rest, after : String;
+{
+  s = Clomosy.GlobalVariableString;
+  if (s == '')
+  {
+    s = '|';
+  }
+  if (Copy(s, 1, 1) <> '|')
+  {
+    s = '|' + s;
+  }
+  if (Copy(s, Length(s), 1) <> '|')
+  {
+    s = s + '|';
+  }
+
+  marker = '|' + key + '=';
+  if (Pos(marker, s) > 0)
+  {
+    before = clGetStringTo(s, marker);
+    rest   = clGetStringAfter(s, marker);
+    after  = clGetStringAfter(rest, '|');
+    s = before + marker + value + '|' + after;
+  }
+  else
+  {
+    s = s + key + '=' + value + '|';
+  }
+
+  Clomosy.GlobalVariableString = s;
+}
+
+void SessionClear;
+{
+  Clomosy.GlobalVariableString = '';
+}
+
+
+function DbUrl : String;
+var u : String;
+{
+  u = SessionGet('DbUrl');
+  if (u == '')
+  {
+    Result = 'https://akilli-ariza-saha-default-rtdb.europe-west1.firebasedatabase.app';
+  }
+  else
+  {
+    Result = u;
+  }
+}
+
+function Token : String;
+{
+  Result = SessionGet('Token');
+}
+
+function AuthQuery : String;
+{
+  Result = 'auth=' + Token;
+}
+
+function RtdbUrl(Path : String; ExtraQuery : String) : String;
+var q : String;
+{
+  q = AuthQuery;
+  if (ExtraQuery <> '')
+  {
+    q = q + '&' + ExtraQuery;
+  }
+  Result = DbUrl + '/' + Path + '.json?' + q;
+}
+
+function JsonEsc(S : String) : String;
+var R : String;
+{
+  R = clGetStringReplace(S, '\', '\\');
+  R = clGetStringReplace(R, '"', '\"');
+  R = clGetStringReplace(R, Chr(13), '');
+  R = clGetStringReplace(R, Chr(10), ' ');
+  Result = R;
+}
+
+function RtdbGet(Path : String; Query : String) : String;
+var
+  R   : TclRest;
+  url : String;
+{
+  url = RtdbUrl(Path, Query);
+  SessionSet('LastReqUrl', url);
+  R = TclRest.Create;
+  try
+    R.BaseURL = url;
+    R.Method  = rmGET;
+    R.Accept  = 'application/json';
+    R.Execute;
+    Result = R.Response;
+  finally
+    R.Free;
+  }
+}
+
+function JsonStrAlan(Json : String; Alan : String) : String;
+var
+  marker : String;
+  s      : String;
+{
+  marker = '"' + Alan + '"';
+  if (Pos(marker, Json) == 0)
+  {
+    Result = '';
+  }
+  else
+  {
+    s = clGetStringAfter(Json, marker);
+    s = clGetStringAfter(s, ':');
+    s = clGetStringAfter(s, '"');
+    Result = clGetStringTo(s, '"');
+  }
+}
+
+
+function IMin(a, b : Integer) : Integer;
+{
+  if (a < b)
+  {
+    Result = a;
+  }
+  else
+  {
+    Result = b;
+  }
+}
+
+function IMax(a, b : Integer) : Integer;
+{
+  if (a > b)
+  {
+    Result = a;
+  }
+  else
+  {
+    Result = b;
+  }
+}
+
+
+void LblHataMsgBoslukAyarla;
+{
+  if (Trim(LblHataMsg.Text) == '')
+  {
+    LblHataMsg.Visible = False;
+    LblHataMsg.Height = 0;
+    LblHataMsg.Margins.Top = 0;
+    LblHataMsg.Margins.Bottom = 0;
+  }
+  else
+  {
+    LblHataMsg.Visible = True;
+    LblHataMsg.Height = 44;
+    LblHataMsg.Margins.Top = 10;
+    LblHataMsg.Margins.Bottom = 8;
+    LblHataMsg.clProSettings.WordWrap = True;
+    LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+  }
+}
+
+
+void YerlesimLayoutIste;
+{
+  if (TmrYerlesim <> nil)
+  {
+    TmrYerlesim.Enabled = False;
+    TmrYerlesim.Enabled = True;
+  }
+}
+
+
+void UygulaResponsiveLogin;
+var
+  rawW, bodyPad, innerW, kartSide, topM, bodyH, kartH : Integer;
+  narrow : Boolean;
+{
+  if (PnlKart == nil)
+  {
+    Exit;
+  }
+
+  rawW = FormLogin.clWidth;
+  if (rawW < 1)
+  {
+    rawW = 360;
+  }
+
+  narrow = (rawW > 250) && (rawW < C_BREAK_NARROW);
+  if (narrow)
+  {
+    bodyPad = 8;
+  }
+  else
+  {
+    bodyPad = 12;
+  }
+
+  PnlBody.Margins.Left   = bodyPad;
+  PnlBody.Margins.Right  = bodyPad;
+  PnlBody.Margins.Top    = bodyPad;
+  PnlBody.Margins.Bottom = IMax(bodyPad, C_SAFE_BOTTOM);
+
+  innerW = rawW - PnlBody.Margins.Left - PnlBody.Margins.Right;
+  if (innerW < 1)
+  {
+    innerW = 200;
+  }
+
+  bodyH = FormLogin.clHeight - PnlBody.Margins.Top - PnlBody.Margins.Bottom;
+  if (bodyH < 1)
+  {
+    bodyH = 500;
+  }
+
+  // Kart genisligi = innerW - sol/sag pay; genis ekranda pay buyur, kart en fazla 400px.
+  // Dar ekranda pay sabit (8/12) kaldigi icin kart pencereyle birlikte akiskan kuculur.
+  if (narrow)
+  {
+    kartSide = 8;
+  }
+  else
+  {
+    kartSide = 12;
+  }
+  if ((innerW - 2 * kartSide) > C_KART_MAX_W)
+  {
+    kartSide = (innerW - C_KART_MAX_W) div 2;
+  }
+  if (kartSide < 4)
+  {
+    kartSide = 4;
+  }
+  if ((2 * kartSide) >= innerW)
+  {
+    kartSide = IMax(2, innerW div 8);
+  }
+
+  PnlKart.Margins.Left  = kartSide;
+  PnlKart.Margins.Right = kartSide;
+
+  kartH = 455;
+  PnlKart.Height = kartH;
+
+  topM = (bodyH - kartH) div 2;
+  if (topM < 8)
+  {
+    topM = 8;
+  }
+  PnlKart.Margins.Top    = topM;
+  PnlKart.Margins.Bottom = topM;
+}
+
+
+void YerlesimLayoutTick;
+{
+  UygulaResponsiveLogin;
+  LblHataMsgBoslukAyarla;
+  if (TmrYerlesim <> nil)
+  {
+    TmrYerlesim.Enabled = False;
+  }
+}
+
+
+// ============================ [SNIPPET: uAuth] ===============================
+// Kaynak: app/lib/uAuth.tro - asagiya inline kopyalandi.
+
+function ApiKey : String;
+var k : String;
+{
+  k = SessionGet('ApiKey');
+  if (k == '')
+  {
+    Result = 'AIzaSyCnBbZShb_c-4PQlenCQZOD5B_IO324dKk';
+  }
+  else
+  {
+    Result = k;
+  }
+}
+
+function AuthBase : String;
+{
+  Result = 'https://identitytoolkit.googleapis.com/v1/accounts:';
+}
+
+function AuthSignIn(Email : String; Sifre : String) : String;
+var
+  body  : String;
+  resp  : String;
+  R     : TclRest;
+  token : String;
+  uid   : String;
+  err   : String;
+{
+  body = '{' + '"email":"' + JsonEsc(Email) + '",' +
+                '"password":"' + JsonEsc(Sifre) + '",' +
+                '"returnSecureToken":true' + '}';
+
+  try
+    R = TclRest.Create;
+    try
+      R.BaseURL     = AuthBase + 'signInWithPassword?key=' + ApiKey;
+      R.Method      = rmPOST;
+      R.Accept      = 'application/json';
+      R.ContentType = 'application/json';
+      R.Body        = body;
+      R.Execute;
+      resp = R.Response;
+    finally
+      R.Free;
+    }
+  except
+    Result = 'Baglanti: ' + LastExceptionMessage;
+    Exit;
+  }
+
+  if (Pos('"error"', resp) > 0)
+  {
+    err = JsonStrAlan(resp, 'message');
+    if (err == '') { err = 'Bilinmeyen hata'; }
+    Result = err;
+  }
+  else
+  {
+    token = Trim(JsonStrAlan(resp, 'idToken'));
+    uid   = Trim(JsonStrAlan(resp, 'localId'));
+
+    if ((token == '') || (uid == ''))
+    {
+      Result = 'Token alinamadi. Resp=' + resp;
+    }
+    else
+    {
+      SessionSet('Token', token);
+      SessionSet('UserId', uid);
+      Result = '';
+    }
+  }
+}
+
+function AuthProfilOku : String;
+var
+  uid     : String;
+  json    : String;
+  rol     : String;
+  adSoyad : String;
+  email   : String;
+{
+  uid = SessionGet('UserId');
+  if (uid == '')
+  {
+    Result = '';
+  }
+  else
+  {
+    json = RtdbGet('users/' + uid, '');
+    SessionSet('LastProfilJson', json);
+
+    if ((json == '') || (json == 'null'))
+    {
+      Result = '';
+    }
+    else
+    {
+      rol     = JsonStrAlan(json, 'rol');
+      adSoyad = JsonStrAlan(json, 'adSoyad');
+      email   = JsonStrAlan(json, 'email');
+
+      SessionSet('Rol', rol);
+      SessionSet('AdSoyad', adSoyad);
+      SessionSet('Email', email);
+
+      Result = rol;
+    }
+  }
+}
+
+
+// =========================== [EVENT HANDLERS] ================================
+
+void GirisClick;
+var
+  email : String;
+  sifre : String;
+  hata  : String;
+  rol   : String;
+{
+  email = Trim(EdtEmail.Text);
+  sifre = EdtSifre.Text;
+  LblHataMsg.Text = '';
+  LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+  LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+  LblHataMsgBoslukAyarla;
+  YerlesimLayoutIste;
+
+  if ((email == '') || (sifre == ''))
+  {
+    LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+    LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+    LblHataMsg.Text = 'Email ve sifre zorunlu';
+    LblHataMsgBoslukAyarla;
+    YerlesimLayoutIste;
+  }
+  else
+  {
+    BtnGiris.Enabled = False;
+    BtnGiris.Text = 'Giris yapiliyor...';
+
+    try
+      hata = AuthSignIn(email, sifre);
+      if (hata <> '')
+      {
+        LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+        LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+        if (Pos('INVALID_LOGIN_CREDENTIALS', hata) > 0)
+        {
+          LblHataMsg.Text = 'E-posta veya şifreniz hatalı. Tekrar deneyiniz.';
+        }
+        else
+        {
+          LblHataMsg.Text = 'Giris hatasi: ' + hata;
+        }
+        LblHataMsgBoslukAyarla;
+        YerlesimLayoutIste;
+      }
+      else
+      {
+        rol = AuthProfilOku;
+        if (rol == '')
+        {
+          LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+          LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+          LblHataMsg.Text = 'Profil bulunamadi. Detay popup gosteriliyor.';
+          LblHataMsgBoslukAyarla;
+          YerlesimLayoutIste;
+          ShowMessage('PROFIL BULUNAMADI' + Chr(10) + Chr(10) +
+                      'UID: ' + SessionGet('UserId') + Chr(10) + Chr(10) +
+                      'URL: ' + SessionGet('LastReqUrl') + Chr(10) + Chr(10) +
+                      'RESPONSE: ' + SessionGet('LastProfilJson'));
+        }
+        else if (rol == 'Yonetici')
+        {
+          Clomosy.RunUnit('uYoneticiAtama');
+          FormLogin.clHide;
+          Exit;
+        }
+        else if (rol == 'TalepAcan')
+        {
+          Clomosy.RunUnit('uTalepAcma');
+          FormLogin.clHide;
+          Exit;
+        }
+        else if (rol == 'SahaPersoneli')
+        {
+          Clomosy.RunUnit('uSahaPersoneli');
+          FormLogin.clHide;
+          Exit;
+        }
+        else
+        {
+          LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+          LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+          LblHataMsg.Text = 'Tanimsiz rol: [' + rol + ']';
+          LblHataMsgBoslukAyarla;
+          YerlesimLayoutIste;
+          ShowMessage('TANIMSIZ ROL' + Chr(10) + Chr(10) +
+                      'rol=[' + rol + ']' + Chr(10) + Chr(10) +
+                      'JSON: ' + SessionGet('LastProfilJson'));
+        }
+      }
+    except
+      LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_DANGER);
+      LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+      LblHataMsg.Text = 'Hata: ' + LastExceptionMessage;
+      LblHataMsgBoslukAyarla;
+      YerlesimLayoutIste;
+    }
+
+    BtnGiris.Enabled = True;
+    BtnGiris.Text = 'Giris Yap';
+    LblHataMsgBoslukAyarla;
+    YerlesimLayoutIste;
+  }
+}
+
+
+// ============================== [UI KURULUM] =================================
+
+{
+  try
+    Adim = '1: FormLogin';
+    FormLogin = TclForm.Create(Self);
+    FormLogin.SetFormColor(C_HEADER_BAR, C_BODY_END, clGVertical);
+    FormLogin.clsetCaption('Giris');
+
+    Adim = '2: PnlBody';
+    PnlBody = FormLogin.AddNewProPanel(FormLogin, 'PnlBody');
+    PnlBody.Align = alClient;
+    PnlBody.Margins.Left   = 12;
+    PnlBody.Margins.Right  = 12;
+    PnlBody.Margins.Top    = 12;
+    PnlBody.Margins.Bottom = 12;
+    PnlBody.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_SURFACE);
+    PnlBody.SetclProSettings(PnlBody.clProSettings);
+
+    Adim = '3: PnlKart';
+    PnlKart = FormLogin.AddNewProPanel(PnlBody, 'PnlKart');
+    PnlKart.Align = alTop;
+    PnlKart.Height = 455;
+    PnlKart.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    PnlKart.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    PnlKart.clProSettings.BorderWidth = 1;
+    PnlKart.clProSettings.IsRound = True;
+    PnlKart.clProSettings.RoundHeight = 12;
+    PnlKart.clProSettings.RoundWidth = 12;
+    PnlKart.SetclProSettings(PnlKart.clProSettings);
+
+    Adim = '4: LblEyebrow';
+    LblEyebrow = FormLogin.AddNewProLabel(PnlKart, 'LblEyebrow', 'AKILLI ARIZA');
+    LblEyebrow.Align = alTop;
+    LblEyebrow.Height = 18;
+    LblEyebrow.Margins.Top    = 16;
+    LblEyebrow.Margins.Left   = 16;
+    LblEyebrow.Margins.Right  = 16;
+    LblEyebrow.Margins.Bottom = 4;
+    LblEyebrow.clProSettings.FontSize = 12;
+    LblEyebrow.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblEyebrow.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblEyebrow.clProSettings.FontHorzAlign = palCenter;
+    LblEyebrow.SetclProSettings(LblEyebrow.clProSettings);
+
+    Adim = '5: LblBaslik';
+    LblBaslik = FormLogin.AddNewProLabel(PnlKart, 'LblBaslik', 'Hos geldiniz');
+    LblBaslik.Align = alTop;
+    LblBaslik.Height = 28;
+    LblBaslik.Margins.Left   = 16;
+    LblBaslik.Margins.Right  = 16;
+    LblBaslik.Margins.Bottom = 6;
+    LblBaslik.clProSettings.FontSize = 17;
+    LblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblBaslik.clProSettings.FontColor = clAlphaColor.clHexToColor(C_TEXT);
+    LblBaslik.clProSettings.FontHorzAlign = palCenter;
+    LblBaslik.SetclProSettings(LblBaslik.clProSettings);
+
+    Adim = '6: LblAltMetin';
+    LblAltMetin = FormLogin.AddNewProLabel(PnlKart, 'LblAltMetin', 'Akilli Ariza & Saha Operasyon Platformu');
+    LblAltMetin.Align = alTop;
+    LblAltMetin.Height = 36;
+    LblAltMetin.Margins.Left   = 16;
+    LblAltMetin.Margins.Right  = 16;
+    LblAltMetin.Margins.Bottom = 14;
+    LblAltMetin.clProSettings.FontSize = 11;
+    LblAltMetin.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblAltMetin.clProSettings.FontHorzAlign = palCenter;
+    LblAltMetin.clProSettings.WordWrap = True;
+    LblAltMetin.SetclProSettings(LblAltMetin.clProSettings);
+
+    Adim = '7: LblEmail';
+    LblEmail = FormLogin.AddNewProLabel(PnlKart, 'LblEmail', 'Email');
+    LblEmail.Align = alTop;
+    LblEmail.Height = 18;
+    LblEmail.Margins.Left   = 16;
+    LblEmail.Margins.Right  = 16;
+    LblEmail.Margins.Bottom = 4;
+    LblEmail.clProSettings.FontSize = 11;
+    LblEmail.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblEmail.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblEmail.SetclProSettings(LblEmail.clProSettings);
+
+    Adim = '8: EdtEmail';
+    EdtEmail = FormLogin.AddNewProEdit(PnlKart, 'EdtEmail', '');
+    EdtEmail.Align = alTop;
+    EdtEmail.Height = 44;
+    EdtEmail.Margins.Left   = 16;
+    EdtEmail.Margins.Right  = 16;
+    EdtEmail.Margins.Bottom = 10;
+    EdtEmail.TextPrompt = 'ornek@firma.com';
+    EdtEmail.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtEmail.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtEmail.clProSettings.BorderWidth = 1;
+    EdtEmail.clProSettings.IsRound = True;
+    EdtEmail.clProSettings.RoundHeight = 10;
+    EdtEmail.clProSettings.RoundWidth = 10;
+    EdtEmail.SetclProSettings(EdtEmail.clProSettings);
+
+    Adim = '9: LblSifre';
+    LblSifre = FormLogin.AddNewProLabel(PnlKart, 'LblSifre', 'Sifre');
+    LblSifre.Align = alTop;
+    LblSifre.Height = 18;
+    LblSifre.Margins.Left   = 16;
+    LblSifre.Margins.Right  = 16;
+    LblSifre.Margins.Bottom = 4;
+    LblSifre.clProSettings.FontSize = 11;
+    LblSifre.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblSifre.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblSifre.SetclProSettings(LblSifre.clProSettings);
+
+    Adim = '10: EdtSifre';
+    EdtSifre = FormLogin.AddNewProEdit(PnlKart, 'EdtSifre', '');
+    EdtSifre.Align = alTop;
+    EdtSifre.Height = 44;
+    EdtSifre.Margins.Left   = 16;
+    EdtSifre.Margins.Right  = 16;
+    EdtSifre.Margins.Bottom = 12;
+    EdtSifre.TextPrompt = '********';
+    EdtSifre.Password = True;
+    EdtSifre.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_CARD);
+    EdtSifre.clProSettings.BorderColor = clAlphaColor.clHexToColor(C_BORDER);
+    EdtSifre.clProSettings.BorderWidth = 1;
+    EdtSifre.clProSettings.IsRound = True;
+    EdtSifre.clProSettings.RoundHeight = 10;
+    EdtSifre.clProSettings.RoundWidth = 10;
+    EdtSifre.SetclProSettings(EdtSifre.clProSettings);
+
+    Adim = '11: BtnGiris';
+    BtnGiris = FormLogin.AddNewProButton(PnlKart, 'BtnGiris', 'Giris Yap');
+    BtnGiris.Align = alTop;
+    BtnGiris.Height = 48;
+    BtnGiris.Margins.Left   = 16;
+    BtnGiris.Margins.Right  = 16;
+    BtnGiris.Margins.Top    = 4;
+    BtnGiris.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(C_PRIMARY);
+    BtnGiris.clProSettings.FontColor = clAlphaColor.clHexToColor(C_ON_SOLID);
+    BtnGiris.clProSettings.BorderWidth = 0;
+    BtnGiris.clProSettings.IsRound = True;
+    BtnGiris.clProSettings.RoundHeight = 10;
+    BtnGiris.clProSettings.RoundWidth = 10;
+    BtnGiris.SetclProSettings(BtnGiris.clProSettings);
+    FormLogin.AddNewEvent(BtnGiris, tbeOnClick, 'GirisClick');
+
+    Adim = '12: LblHataMsg';
+    LblHataMsg = FormLogin.AddNewProLabel(PnlKart, 'LblHataMsg', '');
+    LblHataMsg.Align = alTop;
+    LblHataMsg.Height = 36;
+    LblHataMsg.Margins.Left  = 16;
+    LblHataMsg.Margins.Right = 16;
+    LblHataMsg.Margins.Top   = 4;
+    LblHataMsg.clProSettings.FontColor = clAlphaColor.clHexToColor(C_MUTED);
+    LblHataMsg.clProSettings.FontHorzAlign = palCenter;
+    LblHataMsg.clProSettings.FontSize = 12;
+    LblHataMsg.clProSettings.WordWrap = True;
+    LblHataMsg.SetclProSettings(LblHataMsg.clProSettings);
+    LblHataMsgBoslukAyarla;
+
+    Adim = '13: UygulaResponsiveLogin ilk';
+    UygulaResponsiveLogin;
+
+    Adim = '14: TmrYerlesim';
+    TmrYerlesim = FormLogin.AddNewTimer(FormLogin, 'TmrYerlesim', 200);
+    FormLogin.AddNewEvent(TmrYerlesim, tbeOnTimer, 'YerlesimLayoutTick');
+    TmrYerlesim.Enabled = True;
+
+    Adim = '15: FormLogin.Run';
+    FormLogin.Run;
+
+  except
+    ShowMessage('Login form hatasi (adim ' + Adim + '): ' +
+                LastExceptionClassName + ' / ' + LastExceptionMessage);
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "users": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('rol').val() == 'Yonetici'",
+      ".indexOn": ["rol", "aktif"],
+      "$uid": {
+        ".read":  "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('rol').val() == 'Yonetici')",
+        ".write": "auth != null && root.child('users').child(auth.uid).child('rol').val() == 'Yonetici'"
+      }
+    },
+
+    "tickets": {
+      ".indexOn": ["durum", "talepAcanId", "atananPersonelId", "createdAt"],
+      ".read":   "auth != null",
+
+      "$ticketId": {
+        ".write": "auth != null && ( root.child('users').child(auth.uid).child('rol').val() == 'Yonetici' || (!data.exists() && root.child('users').child(auth.uid).child('rol').val() == 'TalepAcan' && newData.child('talepAcanId').val() == auth.uid) || (data.exists() && root.child('users').child(auth.uid).child('rol').val() == 'SahaPersoneli' && data.child('atananPersonelId').val() == auth.uid) )",
+
+        ".validate": "newData.hasChildren(['ticketNo','baslik','konum','oncelik','durum','talepAcanId','createdAt','updatedAt','slaDeadline'])",
+
+        "durum": {
+          ".validate": "newData.val() == 'Acik' || newData.val() == 'Atandi' || newData.val() == 'Yolda' || newData.val() == 'Islemde' || newData.val() == 'Beklemede' || newData.val() == 'Tamamlandi'"
+        },
+
+        "oncelik": {
+          ".validate": "newData.val() == 'Kritik' || newData.val() == 'Yuksek' || newData.val() == 'Orta' || newData.val() == 'Dusuk'"
+        },
+
+        "events": {
+          ".indexOn": ["changedAt"],
+          "$eventId": {
+            ".validate": "newData.hasChildren(['toStatus','changedBy','changedAt'])"
+          }
+        }
+      }
+    }
+  }
+}

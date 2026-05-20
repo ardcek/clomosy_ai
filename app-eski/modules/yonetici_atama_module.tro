@@ -1,0 +1,95 @@
+unit yonetici_atama_module;
+
+interface
+
+uses
+  MainCode,
+  ticket_service,
+  domain_types;
+
+var
+  LstTalepler     : TclListView;
+  TxtPersonelId   : TclEdit;
+  BtnYenile       : TclButton;
+  BtnAta          : TclButton;
+  SeciliTicketId  : String;
+
+procedure FormCreate(Sender: TObject);
+procedure BtnYenileClick(Sender: TObject);
+procedure BtnAtaClick(Sender: TObject);
+procedure LstTaleplerSelect(Sender: TObject);
+
+implementation
+
+procedure YukleAcikTalepler;
+var
+  Resp : String;
+begin
+  Resp := ListTickets(AktifAuthToken, DURUM_ACIK, 'manager');
+  LstTalepler.LoadFromJsonArray(JsonGetArray(Resp, 'items'));
+end;
+
+procedure FormCreate(Sender: TObject);
+begin
+  if AktifRol <> ROLE_YONETICI then
+  begin
+    ShowMessage('Bu ekran sadece Yonetici rolu icindir.');
+    GoRoleHome;
+    Exit;
+  end;
+
+  LstTalepler := TclListView.Create(MainForm);
+  LstTalepler.OnSelect := @LstTaleplerSelect;
+
+  TxtPersonelId := TclEdit.Create(MainForm);
+  TxtPersonelId.Placeholder := 'Atanacak personel Id';
+
+  BtnYenile := TclButton.Create(MainForm);
+  BtnYenile.Text := 'Havuzu Yenile';
+  BtnYenile.OnClick := @BtnYenileClick;
+
+  BtnAta := TclButton.Create(MainForm);
+  BtnAta.Text := 'Secili Talebi Ata';
+  BtnAta.OnClick := @BtnAtaClick;
+
+  YukleAcikTalepler;
+end;
+
+procedure LstTaleplerSelect(Sender: TObject);
+begin
+  SeciliTicketId := LstTalepler.SelectedValue('id');
+end;
+
+procedure BtnYenileClick(Sender: TObject);
+begin
+  YukleAcikTalepler;
+end;
+
+procedure BtnAtaClick(Sender: TObject);
+var
+  Resp : String;
+begin
+  if SeciliTicketId = '' then
+  begin
+    ShowMessage('Lutfen once bir talep secin.');
+    Exit;
+  end;
+
+  if Trim(TxtPersonelId.Text) = '' then
+  begin
+    ShowMessage('Personel Id zorunludur.');
+    Exit;
+  end;
+
+  Resp := AssignTicket(AktifAuthToken, SeciliTicketId, TxtPersonelId.Text);
+  if JsonGetString(Resp, 'status') <> DURUM_ATANDI then
+  begin
+    ShowMessage('Atama basarisiz.');
+    Exit;
+  end;
+
+  ShowMessage('Talep atandi.');
+  YukleAcikTalepler;
+end;
+
+end.

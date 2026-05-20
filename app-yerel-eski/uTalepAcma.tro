@@ -1,0 +1,307 @@
+// =============================================================================
+// uTalepAcma.tro  -  TALEP ACAN EKRANI
+// -----------------------------------------------------------------------------
+// TalepAcan rolundeki kullanici icin:
+//   - Yeni talep formu (baslik, aciklama, konum, oncelik)
+//   - "Olustur" butonu -> tickets tablosuna ekler, ticket_events ilk kaydi atar
+//   - Kendi actigi taleplerin listesi
+//
+// Stil: Resmi {} stili.
+// =============================================================================
+
+
+// ================================ [SABITLER] =================================
+
+const
+  DURUM_ACIK      = 'Acik';
+  ROL_TALEP_ACAN  = 'TalepAcan';
+  ONC_ORTA        = 'Orta';
+  DB_DOSYA        = 'arzpf.db';
+
+
+// =============================== [GLOBAL VAR] ================================
+
+var
+  Form1            : TclForm;
+  PnlForm          : TclProPanel;
+  PnlListe         : TclProPanel;
+
+  LblBaslik        : TclProLabel;
+  LblHosgeldin     : TclProLabel;
+
+  EdtBaslik        : TclProEdit;
+  EdtAciklama      : TclProEdit;
+  EdtKonum         : TclProEdit;
+  EdtOncelik       : TclProEdit;
+
+  BtnOlustur       : TclProButton;
+  BtnYenile        : TclProButton;
+
+  LvTalepler       : TclProListView;
+
+
+// ============================ [HELPERS - INLINE] =============================
+
+function NowIso : String;
+{
+  Result = FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', Now);
+}
+
+function IsoPlusHours(Saat : Integer) : String;
+{
+  Result = FormatDateTime('yyyy-MM-dd"T"hh:nn:ss', Now + Saat / 24.0);
+}
+
+function OncelikSaat(Oncelik : String) : Integer;
+{
+  if (Oncelik == 'Kritik')      { Result = 2;  }
+  else if (Oncelik == 'Yuksek') { Result = 4;  }
+  else if (Oncelik == 'Dusuk')  { Result = 24; }
+  else                          { Result = 8;  }
+}
+
+function YeniGuid : String;
+var s : String;
+{
+  s = Clomosy.NewGUID;
+  if (s == '')
+  {
+    s = 'ID-' + IntToStr(DateTimeToUnix(Now)) + '-' + IntToStr(Random(1000000));
+  }
+  Result = s;
+}
+
+void DBBaglan;
+{
+  Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + DB_DOSYA, '');
+}
+
+void DBExec(Sql : String);
+{
+  Clomosy.DBSQLiteQuery.Sql.Text = Sql;
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+}
+
+
+// ============================ [LISTE YUKLE] ==================================
+
+void ListeyiYenile;
+var
+  guid : String;
+  sql  : String;
+{
+  guid = Clomosy.AppUserGUID;
+  sql  = 'SELECT id as RECORD_GUID, ticket_no as MAIN_TEXT, ' +
+         'baslik as DETAIL_TEXT, durum as FOOTER_TEXT ' +
+         'FROM tickets WHERE talep_acan_id = ' + QuotedStr(guid) +
+         ' ORDER BY created_at DESC LIMIT 100';
+  LvTalepler.LoadDataFromSql(sql);
+}
+
+
+// ============================ [HANDLER: OLUSTUR] =============================
+
+void OlusturClick;
+var
+  id      : String;
+  no      : String;
+  simdi   : String;
+  saat    : Integer;
+  bitis   : String;
+  baslik  : String;
+  aciklama: String;
+  konum   : String;
+  oncelik : String;
+  guid    : String;
+{
+  baslik   = Trim(EdtBaslik.Text);
+  aciklama = Trim(EdtAciklama.Text);
+  konum    = Trim(EdtKonum.Text);
+  oncelik  = Trim(EdtOncelik.Text);
+  guid     = Clomosy.AppUserGUID;
+
+  if (oncelik == '') { oncelik = ONC_ORTA; }
+
+  if ((baslik == '') || (konum == ''))
+  {
+    ShowMessage('Baslik ve konum zorunlu.');
+  }
+  else
+  {
+    id    = YeniGuid;
+    no    = 'ARZ-' + IntToStr(DateTimeToUnix(Now));
+    simdi = NowIso;
+    saat  = OncelikSaat(oncelik);
+    bitis = IsoPlusHours(saat);
+
+    DBExec(
+      'INSERT INTO tickets (id, ticket_no, baslik, aciklama, konum, oncelik, durum, ' +
+      'talep_acan_id, atanan_personel_id, created_at, updated_at, sla_deadline) VALUES (' +
+      QuotedStr(id)             + ',' +
+      QuotedStr(no)             + ',' +
+      QuotedStr(baslik)         + ',' +
+      QuotedStr(aciklama)       + ',' +
+      QuotedStr(konum)          + ',' +
+      QuotedStr(oncelik)        + ',' +
+      QuotedStr(DURUM_ACIK)     + ',' +
+      QuotedStr(guid)           + ',' +
+      QuotedStr('')             + ',' +
+      QuotedStr(simdi)          + ',' +
+      QuotedStr(simdi)          + ',' +
+      QuotedStr(bitis)          + ')'
+    );
+
+    DBExec(
+      'INSERT INTO ticket_events (id, ticket_id, from_status, to_status, changed_by, changed_at, note) VALUES (' +
+      QuotedStr(YeniGuid)            + ',' +
+      QuotedStr(id)                  + ',' +
+      QuotedStr('')                  + ',' +
+      QuotedStr(DURUM_ACIK)          + ',' +
+      QuotedStr(guid)                + ',' +
+      QuotedStr(simdi)               + ',' +
+      QuotedStr('Talep olusturuldu') + ')'
+    );
+
+    ShowMessage('Talep olusturuldu: ' + no);
+
+    EdtBaslik.Text   = '';
+    EdtAciklama.Text = '';
+    EdtKonum.Text    = '';
+    EdtOncelik.Text  = '';
+
+    ListeyiYenile;
+  }
+}
+
+
+// ============================ [HANDLER: YENILE] ==============================
+
+void YenileClick;
+{
+  ListeyiYenile;
+}
+
+
+// ============================ [STIL HELPER] ==================================
+
+void EditStilUygula(E : TclProEdit);
+{
+  E.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#FFFFFF');
+  E.clProSettings.BorderColor     = clAlphaColor.clHexToColor('#1e3c72');
+  E.clProSettings.BorderWidth     = 1;
+  E.clProSettings.RoundHeight     = 14;
+  E.clProSettings.RoundWidth      = 14;
+  E.clProSettings.IsRound         = True;
+  E.SetclProSettings(E.clProSettings);
+}
+
+void ButonStilUygula(B : TclProButton; HexBg : String);
+{
+  B.clProSettings.BackgroundColor = clAlphaColor.clHexToColor(HexBg);
+  B.clProSettings.BorderWidth     = 0;
+  B.clProSettings.RoundHeight     = 14;
+  B.clProSettings.RoundWidth      = 14;
+  B.clProSettings.IsRound         = True;
+  B.clProSettings.TextSettings.Font.Style = [fsBold];
+  B.clProSettings.TextSettings.FontColor  = clAlphaColor.clHexToColor('#FFFFFF');
+  B.SetclProSettings(B.clProSettings);
+}
+
+
+// =============================== [ANA AKIS] ==================================
+
+{
+  try
+    DBBaglan;
+
+    Form1 = TclForm.Create(Self);
+    Form1.SetFormColor('#1e3c72', '#2a5298', clGVertical);
+    Form1.clsetCaption('Talep Acma');
+
+    LblBaslik = Form1.AddNewProLabel(Form1, 'LblBaslik', 'YENI TALEP');
+    LblBaslik.Align = alTop;
+    LblBaslik.Height = 48;
+    LblBaslik.Margins.Top = 12;
+    LblBaslik.clProSettings.TextSettings.Font.Size  = 18;
+    LblBaslik.clProSettings.TextSettings.Font.Style = [fsBold];
+    LblBaslik.clProSettings.TextSettings.FontColor  = clAlphaColor.clHexToColor('#FFFFFF');
+    LblBaslik.clProSettings.TextSettings.HorzAlign  = TTextAlign.Center;
+    LblBaslik.SetclProSettings(LblBaslik.clProSettings);
+
+    LblHosgeldin = Form1.AddNewProLabel(Form1, 'LblHosgeldin',
+      'Hosgeldiniz, ' + Clomosy.AppUserDisplayName);
+    LblHosgeldin.Align = alTop;
+    LblHosgeldin.Height = 24;
+    LblHosgeldin.clProSettings.TextSettings.Font.Size = 12;
+    LblHosgeldin.clProSettings.TextSettings.FontColor = clAlphaColor.clHexToColor('#E6E6E6');
+    LblHosgeldin.clProSettings.TextSettings.HorzAlign = TTextAlign.Center;
+    LblHosgeldin.SetclProSettings(LblHosgeldin.clProSettings);
+
+    // ---- Form alani -------------------------------------------------------
+    PnlForm = Form1.AddNewProPanel(Form1, 'PnlForm');
+    PnlForm.Align = alTop;
+    PnlForm.Height = 320;
+    PnlForm.Margins.Left   = 16;
+    PnlForm.Margins.Right  = 16;
+    PnlForm.Margins.Top    = 8;
+    PnlForm.clProSettings.BackgroundColor = nil;
+    PnlForm.SetclProSettings(PnlForm.clProSettings);
+
+    EdtBaslik = Form1.AddNewProEdit(PnlForm, 'EdtBaslik', 'Baslik (zorunlu)');
+    EdtBaslik.Align = alTop;
+    EdtBaslik.Height = 48;
+    EdtBaslik.Margins.Top = 8;
+    EditStilUygula(EdtBaslik);
+
+    EdtAciklama = Form1.AddNewProEdit(PnlForm, 'EdtAciklama', 'Aciklama');
+    EdtAciklama.Align = alTop;
+    EdtAciklama.Height = 48;
+    EdtAciklama.Margins.Top = 8;
+    EditStilUygula(EdtAciklama);
+
+    EdtKonum = Form1.AddNewProEdit(PnlForm, 'EdtKonum', 'Konum (zorunlu)');
+    EdtKonum.Align = alTop;
+    EdtKonum.Height = 48;
+    EdtKonum.Margins.Top = 8;
+    EditStilUygula(EdtKonum);
+
+    EdtOncelik = Form1.AddNewProEdit(PnlForm, 'EdtOncelik', 'Oncelik: Kritik | Yuksek | Orta | Dusuk');
+    EdtOncelik.Align = alTop;
+    EdtOncelik.Height = 48;
+    EdtOncelik.Margins.Top = 8;
+    EditStilUygula(EdtOncelik);
+
+    BtnOlustur = Form1.AddNewProButton(PnlForm, 'BtnOlustur', 'Talep Olustur');
+    BtnOlustur.Align = alTop;
+    BtnOlustur.Height = 52;
+    BtnOlustur.Margins.Top = 12;
+    ButonStilUygula(BtnOlustur, '#3aafa9');
+    Form1.AddNewEvent(BtnOlustur, tbeOnClick, 'OlusturClick');
+
+    // ---- Liste alani ------------------------------------------------------
+    PnlListe = Form1.AddNewProPanel(Form1, 'PnlListe');
+    PnlListe.Align = alClient;
+    PnlListe.Margins.Left   = 16;
+    PnlListe.Margins.Right  = 16;
+    PnlListe.Margins.Top    = 8;
+    PnlListe.Margins.Bottom = 16;
+    PnlListe.clProSettings.BackgroundColor = nil;
+    PnlListe.SetclProSettings(PnlListe.clProSettings);
+
+    BtnYenile = Form1.AddNewProButton(PnlListe, 'BtnYenile', 'Listeyi Yenile');
+    BtnYenile.Align = alTop;
+    BtnYenile.Height = 40;
+    ButonStilUygula(BtnYenile, '#6a8eae');
+    Form1.AddNewEvent(BtnYenile, tbeOnClick, 'YenileClick');
+
+    LvTalepler = Form1.AddNewProListView(PnlListe, 'LvTalepler');
+    LvTalepler.Align = alClient;
+    LvTalepler.Margins.Top = 8;
+
+    ListeyiYenile;
+
+    Form1.Run;
+
+  except
+    ShowMessage('uTalepAcma hatasi: ' + LastExceptionClassName + ' / ' + LastExceptionMessage);
+}

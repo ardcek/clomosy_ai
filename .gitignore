@@ -1,0 +1,7 @@
+**/node_modules/
+**/.env
+**/.env.*
+firebase/functions/lib
+.DS_Store
+docs/.venv-docx/
+.firebase/
