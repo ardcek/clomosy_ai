@@ -1,4 +1,4 @@
-# 🧠 Clomosy AI — Otonom Eğitim & Yerel RAG Sistemi
+# Clomosy AI — Otonom Eğitim & Yerel RAG Sistemi
 
 <div align="center">
 
@@ -10,13 +10,13 @@
 
 **Clomosy / TRObject platformu için geliştirilmiş, tamamen çevrimdışı (offline) çalışan otonom yapay zeka eğitim ve yerel bilgi arama (RAG) sistemi.**
 
-[📖 Dokümantasyon](#-nasıl-çalışır) • [🚀 Kurulum](#-kurulum) • [🔍 Arama](#-arama-kullanımı) • [📊 Özellikler](#-özellikler)
+[Dokümantasyon](#proje-nedir) • [Kurulum](#kurulum) • [Arama Kullanımı](#arama-kullanımı) • [Özellikler](#özellikler)
 
 </div>
 
 ---
 
-## 🎯 Proje Nedir?
+## Proje Nedir?
 
 Bu sistem, [Clomosy](https://clomosy.com) platformunun tescilli dili **TRObject** ile yazılmış projelerin ve resmi dokümantasyonun tamamını otomatik olarak tarayıp, yapay zekanın anlık sorgu atıp kullanabileceği **yerel, sıfır maliyetli bir bilgi veritabanı** oluşturur.
 
@@ -24,63 +24,63 @@ Bu sistem, [Clomosy](https://clomosy.com) platformunun tescilli dili **TRObject*
 
 | Problem | Çözümümüz |
 |---------|-----------|
-| Her sorguda tüm projeyi LLM'e yüklemek → **50.000+ Token** | RAG ile sadece ilgili 15 satırı getir → **~500 Token** |
+| Her sorguda tüm projeyi LLM'e yüklemek -> **50.000+ Token** | RAG ile sadece ilgili 15 satırı getir -> **~500 Token** |
 | ML modeli indirme gerektiriyor | Tamamen offline TF-IDF/BM25 motoru |
 | Yeni dosyalar için manual işlem | Watcher ile anlık, otomatik indeksleme |
 | İnternet bağlantısı zorunluluğu | %100 yerel, kapalı devre sistem |
 
-> 💡 **Sonuç:** Token maliyetinde **%99 tasarruf**, sıfır internet bağımlılığı, tam veri mahremiyeti.
+> **Sonuç:** Token maliyetinde **%99 tasarruf**, sıfır internet bağımlılığı, tam veri mahremiyeti.
 
 ---
 
-## ✨ Özellikler
+## Özellikler
 
-- 🤖 **Otonom Dokümantasyon Tarayıcısı** — `docs.clomosy.com`'daki tüm 265 sayfayı (TRObject dil referansı, bileşenler, fonksiyonlar) otomatik çeker ve yapılandırır
-- 📂 **Akıllı Dosya Takipçisi (Watcher)** — `.tro`, `.md`, `.pdf` dosyalarını gerçek zamanlı izler; yeni dosya eklenir eklenmez saniyeler içinde indeksler
-- 🔍 **Anlamsal Yerel Arama** — TF-IDF + BM25 destekli Minisearch motoru ile fuzzy (esnek) arama
-- 📄 **PDF Desteği** — Clomosy Eğitim Kitabı dahil tüm PDF'leri otomatik okuyup parçalara böler
-- 💾 **Kalıcı Bellek** — `vector_db.json` ile indekslenen her şey sistem yeniden başlatılsa bile hatırlanır
-- 🔒 **Sıfır Veri Sızıntısı** — Hiçbir firma kodu dış sunuculara gönderilmez
+- **Otonom Dokümantasyon Tarayıcısı** — docs.clomosy.com'daki tüm 265 sayfayı (TRObject dil referansı, bileşenler, fonksiyonlar) otomatik çeker ve yapılandırır
+- **Akıllı Dosya Takipçisi (Watcher)** — .tro, .md, .pdf dosyalarını gerçek zamanlı izler; yeni dosya eklenir eklenmez saniyeler içinde indeksler
+- **Anlamsal Yerel Arama** — TF-IDF + BM25 destekli Minisearch motoru ile fuzzy (esnek) arama
+- **PDF Desteği** — Clomosy Eğitim Kitabı dahil tüm PDF'leri otomatik okuyup parçalara böler
+- **Kalıcı Bellek** — vector_db.json ile indekslenen her şey sistem yeniden başlatılsa bile hatırlanır
+- **Sıfır Veri Sızıntısı** — Hiçbir firma kodu dış sunuculara gönderilmez
 
 ---
 
-## 📁 Proje Yapısı
+## Proje Yapısı
 
 ```
 clomosy/
-├── 📂 _scripts/                  # Yardımcı scriptler ve eğitim araçları
-│   ├── 📄 clomosy_ai_trainer.js   # Dokümantasyon web tarayıcısı (265 sayfa)
-│   ├── 📄 clomosy_ai_trainer.py   # Python alternatifi
-│   ├── 📄 md2html.js / .py        # Markdown'dan HTML'e dönüştürücüler
-│   └── 📄 read_pdf.cjs / .mjs     # PDF okuma yardımcı scriptleri
+├── _scripts/                  # Yardımcı scriptler ve eğitim araçları
+│   ├── clomosy_ai_trainer.js   # Dokümantasyon web tarayıcısı (265 sayfa)
+│   ├── clomosy_ai_trainer.py   # Python alternatifi
+│   ├── md2html.js / .py        # Markdown'dan HTML'e dönüştürücüler
+│   └── read_pdf.cjs / .mjs     # PDF okuma yardımcı scriptleri
 │
-├── 📂 knowledge_base/            # Clomosy AI Bilgi Bankası ve Referans Kitapları
-│   ├── 📄 TRObject_AI_KnowledgeBase.md   # Tüm Clomosy dökümantasyonu (Markdown)
-│   ├── 📄 TRObject_AI_KnowledgeBase.json # Tüm Clomosy dökümantasyonu (JSON)
-│   ├── 📄 TRObject_Complete_Reference.md # Hızlı boot referansı
-│   └── 📄 TRObject_Documentory.md        # Detaylı dil rehberi
+├── knowledge_base/            # Clomosy AI Bilgi Bankası ve Referans Kitapları
+│   ├── TRObject_AI_KnowledgeBase.md   # Tüm Clomosy dökümantasyonu (Markdown)
+│   ├── TRObject_AI_KnowledgeBase.json # Tüm Clomosy dökümantasyonu (JSON)
+│   ├── TRObject_Complete_Reference.md # Hızlı boot referansı
+│   └── TRObject_Documentory.md        # Detaylı dil rehberi
 │
-├── 📂 pdfs/                      # Kitaplar ve PDF Dokümanları
-│   ├── 📄 clomosy_kitap.pdf      # Clomosy Resmi Eğitim Kitabı V1 (Türkçe)
-│   └── 📄 ClomosyKitapV2.pdf     # Clomosy Kitabı V2 (Yeni Sürüm)
+├── pdfs/                      # Kitaplar ve PDF Dokümanları
+│   ├── clomosy_kitap.pdf      # Clomosy Resmi Eğitim Kitabı V1 (Türkçe)
+│   └── ClomosyKitapV2.pdf     # Clomosy Kitabı V2 (Yeni Sürüm)
 │
-├── 📂 docs_html/                 # Scraped / yedeklenmiş HTML dokümanları
+├── docs_html/                 # Scraped / yedeklenmiş HTML dokümanları
 │   └── ...
 │
-├── 📂 rag_system/                # Yerel RAG (Arama ve Bellek) Sistemi
-│   ├── 📄 indexer.js             # Dosya watcher + chunker + indeksleyici (Geliştirilmiş)
-│   ├── 📄 search.js              # CLI arama arayüzü
-│   ├── 📄 package.json           # Node.js bağımlılıkları
-│   └── 📄 vector_db.json         # Yerel arama veritabanı (auto-generated)
+├── rag_system/                # Yerel RAG (Arama ve Bellek) Sistemi
+│   ├── indexer.js             # Dosya watcher + chunker + indeksleyici (Geliştirilmiş)
+│   ├── search.js              # CLI arama arayüzü
+│   ├── package.json           # Node.js bağımlılıkları
+│   └── vector_db.json         # Yerel arama veritabanı (auto-generated)
 │
-├── 📂 _misc/                     # Geçici / yedek kod dosyaları (MainCode kopyaları vb.)
+├── _misc/                     # Geçici / yedek kod dosyaları (MainCode kopyaları vb.)
 │
-└── 📂 [Proje Klasörleri]/        # GitHub'dan klonlanmış Clomosy TRObject projeleri
+└── [Proje Klasörleri]/        # GitHub'dan klonlanmış Clomosy TRObject projeleri
 ```
 
 ---
 
-## 🚀 Kurulum
+## Kurulum
 
 ### Gereksinimler
 - **Node.js** v18 veya üzeri
@@ -108,11 +108,11 @@ cd rag_system
 node indexer.js
 ```
 
-> ✅ Bu noktadan itibaren sistem arka planda çalışır. Klasörünüze eklediğiniz her `.tro`, `.md` veya `.pdf` dosyası otomatik olarak indekslenir.
+> Bu noktadan itibaren sistem arka planda çalışır. Klasörünüze eklediğiniz her .tro, .md veya .pdf dosyası otomatik olarak indekslenir.
 
 ---
 
-## 🔍 Arama Kullanımı
+## Arama Kullanımı
 
 ```bash
 cd rag_system
@@ -148,7 +148,7 @@ clComponent.SetupComponent(dovizAlBtn,'{
 
 ---
 
-## 🏗️ Sistem Mimarisi
+## Sistem Mimarisi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -166,13 +166,13 @@ clComponent.SetupComponent(dovizAlBtn,'{
 │  KnowledgeBase.json │          ↓                            │
 │                     │   vector_db.json (Kalıcı Bellek)      │
 │                     │          ↓                            │
-│                     │   search.js → Top-K Sonuçlar          │
+│                     │   search.js -> Top-K Sonuçlar          │
 └─────────────────────┴───────────────────────────────────────┘
 ```
 
 ---
 
-## 📊 Performans İstatistikleri
+## Performans İstatistikleri
 
 > Gerçek çalışma verileri (01.07.2026 itibarıyla)
 
@@ -182,22 +182,22 @@ clComponent.SetupComponent(dovizAlBtn,'{
 | İndekslenen Chunk | 5.979+ kod parçası |
 | Veritabanı Boyutu | ~12.5 MB |
 | Arama Süresi | < 500ms |
-| Desteklenen Format | `.tro`, `.md`, `.pdf`, `.txt` |
+| Desteklenen Format | .tro, .md, .pdf, .txt |
 | Token Tasarrufu | %99 |
 
 ---
 
-## 🛠️ Kullanılan Teknolojiler
+## Kullanılan Teknolojiler
 
 | Paket | Versiyon | Amaç |
 |-------|----------|------|
-| `chokidar` | ^4.x | Dosya sistemi izleme (Watcher) |
-| `minisearch` | ^7.x | Offline TF-IDF/BM25 arama motoru |
-| `pdf-parse` | ^1.1.1 | PDF metin çıkarma |
+| chokidar | ^4.x | Dosya sistemi izleme (Watcher) |
+| minisearch | ^7.x | Offline TF-IDF/BM25 arama motoru |
+| pdf-parse | ^1.1.1 | PDF metin çıkarma |
 
 ---
 
-## 🗺️ Yol Haritası
+## Yol Haritası
 
 - [x] Clomosy dokümantasyon web tarayıcısı
 - [x] Dosya watcher ve otomatik indeksleme
@@ -210,7 +210,7 @@ clComponent.SetupComponent(dovizAlBtn,'{
 
 ---
 
-## 📜 Lisans
+## Lisans
 
 MIT License — Özgürce kullanabilir, dağıtabilir ve geliştirebilirsiniz.
 
@@ -218,7 +218,7 @@ MIT License — Özgürce kullanabilir, dağıtabilir ve geliştirebilirsiniz.
 
 <div align="center">
 
-**Clomosy Topluluğu için ❤️ ile geliştirilmiştir**
+**Clomosy Topluluğu için sevgiyle geliştirilmiştir**
 
 [clomosy.com](https://clomosy.com) • [docs.clomosy.com](https://docs.clomosy.com)
 
