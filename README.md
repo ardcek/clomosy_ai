@@ -154,9 +154,9 @@ clComponent.SetupComponent(dovizAlBtn,'{
 ┌─────────────────────────────────────────────────────────────┐
 │                    CLOMOSY AI SİSTEMİ                       │
 ├─────────────────────┬───────────────────────────────────────┤
-│  FAZ 1: VERİ ÇEKME  │  FAZ 2: YEREL RAG                    │
+│  FAZ 1: VERİ ÇEKME  │  FAZ 2: YEREL RAG                     │
 │                     │                                       │
-│  docs.clomosy.com   │   .tro / .md / .pdf dosyaları        │
+│  docs.clomosy.com   │   .tro / .md / .pdf dosyaları         │
 │       ↓             │          ↓                            │
 │  MediaWiki API      │   chokidar (Watcher)                  │
 │       ↓             │          ↓                            │
@@ -166,7 +166,7 @@ clComponent.SetupComponent(dovizAlBtn,'{
 │  KnowledgeBase.json │          ↓                            │
 │                     │   vector_db.json (Kalıcı Bellek)      │
 │                     │          ↓                            │
-│                     │   search.js -> Top-K Sonuçlar          │
+│                     │   search.js -> Top-K Sonuçlar         │
 └─────────────────────┴───────────────────────────────────────┘
 ```
 
