@@ -1,7 +1,70 @@
-**/node_modules/
-**/.env
-**/.env.*
-firebase/functions/lib
+# .gitignore — Clomosy AI System
+
+# Node.js
+node_modules/
+rag_system/node_modules/
+npm-debug.log*
+package-lock.json
+rag_system/package-lock.json
+
+# Veritabanı (auto-generated, büyük dosya)
+rag_system/vector_db.json
+
+# PDF Dosyaları (büyük boyut)
+*.pdf
+
+# Kişisel / lokal HTML döküman yedekleri
+docs_*.html
+clomosy_org_page.html
+clomosy_referans.html
+Clomosy_*.html
+"Clomosy _ Forum*"
+forum_members.html
+
+# Büyük binary / özel dosyalar
+*.docx
+stability_resp.json
+
+# Geçici
+*.tmp
+*.log
 .DS_Store
-docs/.venv-docx/
-.firebase/
+Thumbs.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Klonlanmış sub-projeler (ayrı repolar)
+AERIAL-DEFENCE-GAME-CLOMOSY-APP/
+Calculator_Clomosy/
+Clomosy-Irk-tayini-Bitmemi-/
+Clomosy-Sanalbitkibak-mapp/
+Clomosy-TRObject-Borsa-Takip-Uygulamasi/
+ClomosyArabaGalerUyg/
+ClomosyBankProject/
+Clomosy_StajDay1/
+Clomosy_StajDay2-3/
+EmineYrgr-clomosy/
+FARMER-AGRICULTURE-APP-with-CLOMOSY/
+GameAnimation/
+GuessWhatGame--Clomosy/
+HABITLY-CLOMOSY-TROBJECT-/
+KisiselButceTakibiUygulamasi/
+Mobil_Dashboard_ve_Satis_Performans_Raporlama/
+My-Clomosy-Projects/
+Proje/
+QR-Personel-Takip-Uygulamasi-Clomosy/
+SosyalMedya/
+TRObject-ile-Kitap-Takip-Sistemi/
+Vardiya-Ve-Personel-Takip-Uygulamas-Clomosy/
+Web-Api-Example/
+WorkHive-Clomosy/
+clomosy-lab-management-system/
+clomosyDBProcess/
+clomosyToDoList/
+clomosy_projects/
+iot-demo/
+spot-difference-game/
+youtube-videos/
