@@ -48,13 +48,8 @@ async function processFile(filePath) {
         const ext = path.extname(filePath).toLowerCase();
         let text = "";
         
-        if (ext === '.tro' || ext === '.md' || ext === '.txt') {
+        if (ext === '.tro') {
             text = fs.readFileSync(filePath, 'utf-8');
-        } else if (ext === '.pdf') {
-            const dataBuffer = fs.readFileSync(filePath);
-            const pdfParse = typeof pdf === 'function' ? pdf : pdf.default;
-            const data = await pdfParse(dataBuffer);
-            text = data.text;
         } else {
             return;
         }
@@ -111,7 +106,7 @@ async function deleteFile(filePath) {
 
 // Sistemi Başlat
 async function start() {
-    console.log("[RAG] Sistem Başlatıldı (MiniSearch Motoru - 0 Token, 0 İnternet). Klasörler izleniyor...");
+    console.log("[RAG] Sistem Başlatıldı (MiniSearch Motoru - Sadece .tro Dosyaları İzleniyor). Klasörler izleniyor...");
     
     const watcher = chokidar.watch(TARGET_DIR, {
         ignored: /(^|[\/\\])\..|node_modules|rag_system/,
@@ -121,21 +116,22 @@ async function start() {
 
     watcher
       .on('add', async filePath => {
-          if (['.tro', '.md', '.pdf'].includes(path.extname(filePath).toLowerCase())) {
+          if (path.extname(filePath).toLowerCase() === '.tro') {
               await processFile(filePath);
           }
       })
       .on('change', async filePath => {
-           if (['.tro', '.md', '.pdf'].includes(path.extname(filePath).toLowerCase())) {
+           if (path.extname(filePath).toLowerCase() === '.tro') {
               await processFile(filePath);
           }
       })
       .on('unlink', async filePath => {
-          if (['.tro', '.md', '.pdf'].includes(path.extname(filePath).toLowerCase())) {
+          if (path.extname(filePath).toLowerCase() === '.tro') {
               await deleteFile(filePath);
           }
       });
 }
 
 start();
+
 
