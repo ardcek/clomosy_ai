@@ -1,0 +1,338 @@
+var
+  MainForm: TclForm;
+  PnlHeader, PnlHeaderLeft, PnlHeaderRight: TclProPanel;
+  LblHeaderTitle, LblHeaderSub, LblStatusBadge: TclProLabel;
+  LytLeftSimulator, LytRightCanvas: TclLayout;
+  PnlPhoneBorder, PnlPhoneScreen: TclProPanel;
+  PnlCanvasCard, PnlCanvasFooter: TclProPanel;
+  LytAnaSayfa, LytIcerikOlustur, LytAIOniri, LytSablonYonet, LytIcerikListesi: TclLayout;
+  LblAppTitle, LblAppUser: TclProLabel;
+  BtnNavCreate, BtnNavList, BtnNavShare, BtnNavTemplates, BtnNavAISuggest, BtnNavHistory, BtnNavExit: TclProButton;
+  LblScreen2Title: TclProLabel;
+  EdtBaslik, EdtAciklama, EdtMarka, EdtTarih, EdtSaat, EdtGorselUrl: TclProEdit;
+  BtnAIOneriyeGit, BtnAIGorselUret, BtnTaslakKaydet: TclProButton;
+  LblScreen3Title, LblAIResultTitle: TclProLabel;
+  EdtPromptText: TclProEdit;
+  PnlAIResultBox: TclProPanel;
+  LblAIResultContent: TclProLabel;
+  BtnAIOneriAl, BtnOneriKullan, BtnOneriGeri: TclProButton;
+  PnlCanvasHeader: TclProPanel;
+  LblCanvasLogo, LblCanvasRatioMode: TclProLabel;
+  ImgCanvasMain: TclImage;
+  LblCanvasTitle, LblCanvasDesc, LblCanvasFooterText: TclProLabel;
+  BtnRatioSquare, BtnRatioStory, BtnRatioFB, BtnDownloadGorsel, BtnShareGorsel: TclProButton;
+  LytRatioGroup, LytActionGroup: TclLayout;
+
+void EkranlariGizle;
+{
+  LytAnaSayfa.Visible = False;
+  LytIcerikOlustur.Visible = False;
+  LytAIOniri.Visible = False;
+}
+
+void GoToAnaSayfa; { EkranlariGizle; LytAnaSayfa.Visible = True; }
+void GoToIcerikOlustur; { EkranlariGizle; LytIcerikOlustur.Visible = True; }
+void GoToAIOniri; { EkranlariGizle; LytAIOniri.Visible = True; }
+
+void FormVerileriniGuncelle;
+{
+  LblCanvasTitle.Text = EdtBaslik.Text;
+  LblCanvasDesc.Text = EdtAciklama.Text;
+  LblCanvasLogo.Text = EdtMarka.Text;
+  if (EdtGorselUrl.Text <> '') 
+  {
+    MainForm.SetImage(ImgCanvasMain, EdtGorselUrl.Text);
+  }
+}
+
+void SetRatioSquare;
+{
+  PnlCanvasCard.Width = 380;
+  PnlCanvasCard.Height = 380;
+  LblCanvasRatioMode.Text = 'POST (1:1)';
+}
+
+void SetRatioStory;
+{
+  PnlCanvasCard.Width = 260;
+  PnlCanvasCard.Height = 440;
+  LblCanvasRatioMode.Text = 'STORY (9:16)';
+}
+
+void SetRatioLandscape;
+{
+  PnlCanvasCard.Width = 440;
+  PnlCanvasCard.Height = 250;
+  LblCanvasRatioMode.Text = 'FEED (16:9)';
+}
+
+void ExecuteAIOneri;
+{
+  if (EdtPromptText.Text == '') 
+  {
+    ShowMessage('Lütfen bir komut giriniz!');
+    Exit;
+  }
+  
+  LblAIResultContent.Text = '🎯 Önerilen Başlık: Yaz Rüzgârı Başladı! ☀️' + #13 +
+                            '📝 Açıklama: Sezonun en göz alıcı tasarımlarında %50 indirim fırsatı!' + #13 +
+                            '🏷️ Marka: Aura Design';
+  BtnOneriKullan.Visible = True;
+}
+
+void ApplyAIOneri;
+{
+  EdtBaslik.Text = 'Yaz Rüzgârı Başladı! ☀️';
+  EdtAciklama.Text = 'Sezonun en göz alıcı tasarımlarında %50 indirim fırsatı!';
+  EdtMarka.Text = 'Aura Design';
+  EdtGorselUrl.Text = 'https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=800&q=80';
+  FormVerileriniGuncelle;
+  GoToIcerikOlustur;
+}
+
+void SimulateAIGorsel;
+{
+  EdtGorselUrl.Text = 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80';
+  FormVerileriniGuncelle;
+  ShowMessage('AI Görseli başarıyla üretildi ve Kanvasa yüklendi!');
+}
+
+void HeaderKurulum;
+{
+  PnlHeader = MainForm.AddNewProPanel(MainForm, 'PnlHeader');
+  PnlHeader.Align = alTop; PnlHeader.Height = 70;
+  clComponent.SetupComponent(PnlHeader, '{"BackgroundColor":"#1E293B", "BorderColor":"#334155", "BorderWidth":1}');
+
+  PnlHeaderLeft = MainForm.AddNewProPanel(PnlHeader, 'PnlHeaderLeft');
+  PnlHeaderLeft.Align = alLeft; PnlHeaderLeft.Width = 400;
+  clComponent.SetupComponent(PnlHeaderLeft, '{"BackgroundColor":"#1E293B"}');
+
+  LblHeaderTitle = MainForm.AddNewProLabel(PnlHeaderLeft, 'LblHeaderTitle', 'AI Sosyal Medya Otomasyonu');
+  LblHeaderTitle.Align = alTop; LblHeaderTitle.Height = 35; LblHeaderTitle.Margins.Left = 20; LblHeaderTitle.Margins.Top = 10;
+  LblHeaderTitle.clProSettings.FontSize = 16; LblHeaderTitle.clProSettings.FontColor = clAlphaColor.clWhite;
+  LblHeaderTitle.clProSettings.TextSettings.Font.Style = [fsBold]; LblHeaderTitle.SetclProSettings(LblHeaderTitle.clProSettings);
+
+  LblHeaderSub = MainForm.AddNewProLabel(PnlHeaderLeft, 'LblHeaderSub', 'Canlı Tasarım Ön İzlemeli UI / UX Workspace');
+  LblHeaderSub.Align = alTop; LblHeaderSub.Height = 20; LblHeaderSub.Margins.Left = 20;
+  LblHeaderSub.clProSettings.FontSize = 11; LblHeaderSub.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8');
+  LblHeaderSub.SetclProSettings(LblHeaderSub.clProSettings);
+
+  PnlHeaderRight = MainForm.AddNewProPanel(PnlHeader, 'PnlHeaderRight');
+  PnlHeaderRight.Align = alRight; PnlHeaderRight.Width = 220;
+  clComponent.SetupComponent(PnlHeaderRight, '{"BackgroundColor":"#1E293B"}');
+
+  LblStatusBadge = MainForm.AddNewProLabel(PnlHeaderRight, 'LblStatusBadge', '🟢 Tasarım Modu: Aktif');
+  LblStatusBadge.Align = alCenter; LblStatusBadge.Height = 35; LblStatusBadge.Width = 180;
+  LblStatusBadge.clProSettings.FontSize = 12; LblStatusBadge.clProSettings.FontColor = clAlphaColor.clHexToColor('#10B981');
+  LblStatusBadge.clProSettings.FontHorzAlign = palCenter; LblStatusBadge.clProSettings.FontVertAlign = palCenter;
+  LblStatusBadge.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#064E3B');
+  LblStatusBadge.clProSettings.RoundHeight = 15; LblStatusBadge.clProSettings.RoundWidth = 15;
+  LblStatusBadge.SetclProSettings(LblStatusBadge.clProSettings);
+}
+
+void SolSimulatorKurulum;
+{
+  LytLeftSimulator = MainForm.AddNewLayout(MainForm, 'LytLeftSimulator');
+  LytLeftSimulator.Align = alLeft; LytLeftSimulator.Width = 420; LytLeftSimulator.Margins.Left = 15; LytLeftSimulator.Margins.Top = 15;
+
+  PnlPhoneBorder = MainForm.AddNewProPanel(LytLeftSimulator, 'PnlPhoneBorder');
+  PnlPhoneBorder.Align = alClient;
+  clComponent.SetupComponent(PnlPhoneBorder, '{"BackgroundColor":"#252632", "RoundHeight":40, "RoundWidth":40}');
+
+  PnlPhoneScreen = MainForm.AddNewProPanel(PnlPhoneBorder, 'PnlPhoneScreen');
+  PnlPhoneScreen.Align = alClient; PnlPhoneScreen.Margins.Left = 8; PnlPhoneScreen.Margins.Top = 8; PnlPhoneScreen.Margins.Right = 8; PnlPhoneScreen.Margins.Bottom = 8;
+  clComponent.SetupComponent(PnlPhoneScreen, '{"BackgroundColor":"#12131C", "RoundHeight":32, "RoundWidth":32}');
+
+  LytAnaSayfa = MainForm.AddNewLayout(PnlPhoneScreen, 'LytAnaSayfa'); LytAnaSayfa.Align = alClient;
+  LytIcerikOlustur = MainForm.AddNewLayout(PnlPhoneScreen, 'LytIcerikOlustur'); LytIcerikOlustur.Align = alClient; LytIcerikOlustur.Visible = False;
+  LytAIOniri = MainForm.AddNewLayout(PnlPhoneScreen, 'LytAIOniri'); LytAIOniri.Align = alClient; LytAIOniri.Visible = False;
+
+  LblAppTitle = MainForm.AddNewProLabel(LytAnaSayfa, 'LblAppTitle', 'SOSYAL MEDYA OTOMASYON');
+  LblAppTitle.Align = alTop; LblAppTitle.Height = 40; LblAppTitle.Margins.Top = 40;
+  LblAppTitle.clProSettings.FontColor = clAlphaColor.clWhite; LblAppTitle.clProSettings.FontSize = 18;
+  LblAppTitle.clProSettings.FontHorzAlign = palCenter; LblAppTitle.clProSettings.TextSettings.Font.Style = [fsBold]; LblAppTitle.SetclProSettings(LblAppTitle.clProSettings);
+
+  LblAppUser = MainForm.AddNewProLabel(LytAnaSayfa, 'LblAppUser', 'ardcek@hotmail.com');
+  LblAppUser.Align = alTop; LblAppUser.Height = 25; LblAppUser.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B');
+  LblAppUser.clProSettings.FontHorzAlign = palCenter; LblAppUser.SetclProSettings(LblAppUser.clProSettings);
+
+  BtnNavCreate = MainForm.AddNewProButton(LytAnaSayfa, 'BtnNavCreate', '➕ YENİ İÇERİK OLUŞTUR');
+  BtnNavCreate.Align = alTop; BtnNavCreate.Height = 45; BtnNavCreate.Margins.Top = 30; BtnNavCreate.Margins.Left = 20; BtnNavCreate.Margins.Right = 20;
+  BtnNavCreate.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#4CAF50'); BtnNavCreate.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnNavCreate.clProSettings.RoundHeight = 10; BtnNavCreate.SetclProSettings(BtnNavCreate.clProSettings);
+  MainForm.AddNewEvent(BtnNavCreate, tbeOnClick, 'GoToIcerikOlustur');
+
+  BtnNavAISuggest = MainForm.AddNewProButton(LytAnaSayfa, 'BtnNavAISuggest', '✨ AI İÇERİK ÖNERİSİ');
+  BtnNavAISuggest.Align = alTop; BtnNavAISuggest.Height = 45; BtnNavAISuggest.Margins.Top = 12; BtnNavAISuggest.Margins.Left = 20; BtnNavAISuggest.Margins.Right = 20;
+  BtnNavAISuggest.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#B388FF'); BtnNavAISuggest.clProSettings.FontColor = clAlphaColor.clHexToColor('#12131C');
+  BtnNavAISuggest.clProSettings.RoundHeight = 10; BtnNavAISuggest.SetclProSettings(BtnNavAISuggest.clProSettings);
+  MainForm.AddNewEvent(BtnNavAISuggest, tbeOnClick, 'GoToAIOniri');
+
+  BtnNavExit = MainForm.AddNewProButton(LytAnaSayfa, 'BtnNavExit', '❌ ÇIKIŞ');
+  BtnNavExit.Align = alBottom; BtnNavExit.Height = 45; BtnNavExit.Margins.Bottom = 20; BtnNavExit.Margins.Left = 20; BtnNavExit.Margins.Right = 20;
+  BtnNavExit.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#F44336'); BtnNavExit.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnNavExit.clProSettings.RoundHeight = 10; BtnNavExit.SetclProSettings(BtnNavExit.clProSettings);
+  MainForm.AddNewEvent(BtnNavExit, tbeOnClick, 'MainForm.Close');
+
+  LblScreen2Title = MainForm.AddNewProLabel(LytIcerikOlustur, 'LblScreen2Title', 'YENİ İÇERİK OLUŞTUR');
+  LblScreen2Title.Align = alTop; LblScreen2Title.Height = 35; LblScreen2Title.Margins.Top = 15;
+  LblScreen2Title.clProSettings.FontColor = clAlphaColor.clHexToColor('#B388FF'); LblScreen2Title.clProSettings.FontSize = 14;
+  LblScreen2Title.clProSettings.FontHorzAlign = palCenter; LblScreen2Title.SetclProSettings(LblScreen2Title.clProSettings);
+
+  EdtBaslik = MainForm.AddNewProEdit(LytIcerikOlustur, 'EdtBaslik', 'Başlık Giriniz...');
+  EdtBaslik.Align = alTop; EdtBaslik.Height = 40; EdtBaslik.Margins.Top = 10; EdtBaslik.Margins.Left = 15; EdtBaslik.Margins.Right = 15;
+  MainForm.AddNewEvent(EdtBaslik, tbeOnChange, 'FormVerileriniGuncelle');
+
+  EdtAciklama = MainForm.AddNewProEdit(LytIcerikOlustur, 'EdtAciklama', 'Açıklama Giriniz...');
+  EdtAciklama.Align = alTop; EdtAciklama.Height = 40; EdtAciklama.Margins.Top = 10; EdtAciklama.Margins.Left = 15; EdtAciklama.Margins.Right = 15;
+  MainForm.AddNewEvent(EdtAciklama, tbeOnChange, 'FormVerileriniGuncelle');
+
+  EdtMarka = MainForm.AddNewProEdit(LytIcerikOlustur, 'EdtMarka', 'Marka / Ürün Bilgisi...');
+  EdtMarka.Align = alTop; EdtMarka.Height = 40; EdtMarka.Margins.Top = 10; EdtMarka.Margins.Left = 15; EdtMarka.Margins.Right = 15;
+  MainForm.AddNewEvent(EdtMarka, tbeOnChange, 'FormVerileriniGuncelle');
+
+  EdtGorselUrl = MainForm.AddNewProEdit(LytIcerikOlustur, 'EdtGorselUrl', 'Görsel internet Linki...');
+  EdtGorselUrl.Align = alTop; EdtGorselUrl.Height = 40; EdtGorselUrl.Margins.Top = 10; EdtGorselUrl.Margins.Left = 15; EdtGorselUrl.Margins.Right = 15;
+  MainForm.AddNewEvent(EdtGorselUrl, tbeOnChange, 'FormVerileriniGuncelle');
+
+  BtnAIGorselUret = MainForm.AddNewProButton(LytIcerikOlustur, 'BtnAIGorselUret', '🖼️ AI GÖRSEL ÜRET');
+  BtnAIGorselUret.Align = alTop; BtnAIGorselUret.Height = 40; BtnAIGorselUret.Margins.Top = 20; BtnAIGorselUret.Margins.Left = 15; BtnAIGorselUret.Margins.Right = 15;
+  BtnAIGorselUret.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#E91E63'); BtnAIGorselUret.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnAIGorselUret.clProSettings.RoundHeight = 8; BtnAIGorselUret.SetclProSettings(BtnAIGorselUret.clProSettings);
+  MainForm.AddNewEvent(BtnAIGorselUret, tbeOnClick, 'SimulateAIGorsel');
+
+  BtnTaslakKaydet = MainForm.AddNewProButton(LytIcerikOlustur, 'BtnTaslakKaydet', '⬅️ ANA MENÜYE DÖN');
+  BtnTaslakKaydet.Align = alBottom; BtnTaslakKaydet.Height = 40; BtnTaslakKaydet.Margins.Bottom = 15; BtnTaslakKaydet.Margins.Left = 15; BtnTaslakKaydet.Margins.Right = 15;
+  BtnTaslakKaydet.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#607D8B'); BtnTaslakKaydet.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnTaslakKaydet.clProSettings.RoundHeight = 8; BtnTaslakKaydet.SetclProSettings(BtnTaslakKaydet.clProSettings);
+  MainForm.AddNewEvent(BtnTaslakKaydet, tbeOnClick, 'GoToAnaSayfa');
+
+  LblScreen3Title = MainForm.AddNewProLabel(LytAIOniri, 'LblScreen3Title', 'AI İÇERİK ÖNERİSİ');
+  LblScreen3Title.Align = alTop; LblScreen3Title.Height = 35; LblScreen3Title.Margins.Top = 15;
+  LblScreen3Title.clProSettings.FontColor = clAlphaColor.clHexToColor('#B388FF'); LblScreen3Title.clProSettings.FontSize = 14;
+  LblScreen3Title.clProSettings.FontHorzAlign = palCenter; LblScreen3Title.SetclProSettings(LblScreen3Title.clProSettings);
+
+  EdtPromptText = MainForm.AddNewProEdit(LytAIOniri, 'EdtPromptText', 'Ne hakkında paylaşım istiyorsunuz?');
+  EdtPromptText.Align = alTop; EdtPromptText.Height = 45; EdtPromptText.Margins.Top = 10; EdtPromptText.Margins.Left = 15; EdtPromptText.Margins.Right = 15;
+
+  PnlAIResultBox = MainForm.AddNewProPanel(LytAIOniri, 'PnlAIResultBox');
+  PnlAIResultBox.Align = alTop; PnlAIResultBox.Height = 150; PnlAIResultBox.Margins.Top = 15; PnlAIResultBox.Margins.Left = 15; PnlAIResultBox.Margins.Right = 15;
+  clComponent.SetupComponent(PnlAIResultBox, '{"BackgroundColor":"#1A1C29", "BorderColor":"#334155", "BorderWidth":1, "RoundHeight":10, "RoundWidth":10}');
+
+  LblAIResultContent = MainForm.AddNewProLabel(PnlAIResultBox, 'LblAIResultContent', 'Henüz öneri alınmadı. Komut yazıp üretin.');
+  LblAIResultContent.Align = alClient; LblAIResultContent.Margins.Left = 10; LblAIResultContent.Margins.Top = 10; LblAIResultContent.Margins.Right = 10;
+  LblAIResultContent.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); LblAIResultContent.clProSettings.FontSize = 11;
+  LblAIResultContent.clProSettings.WordWrap = True; LblAIResultContent.SetclProSettings(LblAIResultContent.clProSettings);
+
+  BtnAIOneriAl = MainForm.AddNewProButton(LytAIOniri, 'BtnAIOneriAl', '✨ AI ÖNERİSİ AL');
+  BtnAIOneriAl.Align = alTop; BtnAIOneriAl.Height = 40; BtnAIOneriAl.Margins.Top = 15; BtnAIOneriAl.Margins.Left = 15; BtnAIOneriAl.Margins.Right = 15;
+  BtnAIOneriAl.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#B388FF'); BtnAIOneriAl.clProSettings.FontColor = clAlphaColor.clHexToColor('#12131C');
+  BtnAIOneriAl.clProSettings.RoundHeight = 8; BtnAIOneriAl.SetclProSettings(BtnAIOneriAl.clProSettings);
+  MainForm.AddNewEvent(BtnAIOneriAl, tbeOnClick, 'ExecuteAIOneri');
+
+  BtnOneriKullan = MainForm.AddNewProButton(LytAIOniri, 'BtnOneriKullan', '✅ BU ÖNERİYİ KULLAN');
+  BtnOneriKullan.Align = alTop; BtnOneriKullan.Height = 40; BtnOneriKullan.Margins.Top = 10; BtnOneriKullan.Margins.Left = 15; BtnOneriKullan.Margins.Right = 15;
+  BtnOneriKullan.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#4CAF50'); BtnOneriKullan.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnOneriKullan.clProSettings.RoundHeight = 8; BtnOneriKullan.Visible = False; BtnOneriKullan.SetclProSettings(BtnOneriKullan.clProSettings);
+  MainForm.AddNewEvent(BtnOneriKullan, tbeOnClick, 'ApplyAIOneri');
+
+  BtnOneriGeri = MainForm.AddNewProButton(LytAIOniri, 'BtnOneriGeri', '‹ GERİ');
+  BtnOneriGeri.Align = alBottom; BtnOneriGeri.Height = 40; BtnOneriGeri.Margins.Bottom = 15; BtnOneriGeri.Margins.Left = 15; BtnOneriGeri.Margins.Right = 15;
+  BtnOneriGeri.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#607D8B'); BtnOneriGeri.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnOneriGeri.clProSettings.RoundHeight = 8; BtnOneriGeri.SetclProSettings(BtnOneriGeri.clProSettings);
+  MainForm.AddNewEvent(BtnOneriGeri, tbeOnClick, 'GoToAnaSayfa');
+}
+
+void SagKanvasKurulum;
+{
+  LytRightCanvas = MainForm.AddNewLayout(MainForm, 'LytRightCanvas');
+  LytRightCanvas.Align = alClient; LytRightCanvas.Margins.Left = 30; LytRightCanvas.Margins.Top = 15; LytRightCanvas.Margins.Right = 20;
+
+  LytRatioGroup = MainForm.AddNewLayout(LytRightCanvas, 'LytRatioGroup');
+  LytRatioGroup.Align = alTop; LytRatioGroup.Height = 45;
+
+  BtnRatioSquare = MainForm.AddNewProButton(LytRatioGroup, 'BtnRatioSquare', '⏹️ KARE (1:1)');
+  BtnRatioSquare.Align = alLeft; BtnRatioSquare.Width = 140;
+  BtnRatioSquare.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E293B'); BtnRatioSquare.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnRatioSquare.SetclProSettings(BtnRatioSquare.clProSettings);
+  MainForm.AddNewEvent(BtnRatioSquare, tbeOnClick, 'SetRatioSquare');
+
+  BtnRatioStory = MainForm.AddNewProButton(LytRatioGroup, 'BtnRatioStory', '📱 STORY (9:16)');
+  BtnRatioStory.Align = alLeft; BtnRatioStory.Width = 140; BtnRatioStory.Margins.Left = 10;
+  BtnRatioStory.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E293B'); BtnRatioStory.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnRatioStory.SetclProSettings(BtnRatioStory.clProSettings);
+  MainForm.AddNewEvent(BtnRatioStory, tbeOnClick, 'SetRatioStory');
+
+  BtnRatioFB = MainForm.AddNewProButton(LytRatioGroup, 'BtnRatioFB', '🖥️ FEED (16:9)');
+  BtnRatioFB.Align = alLeft; BtnRatioFB.Width = 140; BtnRatioFB.Margins.Left = 10;
+  BtnRatioFB.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#1E293B'); BtnRatioFB.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnRatioFB.SetclProSettings(BtnRatioFB.clProSettings);
+  MainForm.AddNewEvent(BtnRatioFB, tbeOnClick, 'SetRatioLandscape');
+
+  PnlCanvasCard = MainForm.AddNewProPanel(LytRightCanvas, 'PnlCanvasCard');
+  PnlCanvasCard.Align = alCenter; PnlCanvasCard.Width = 380; PnlCanvasCard.Height = 380;
+  clComponent.SetupComponent(PnlCanvasCard, '{"BackgroundColor":"#1E293B", "BorderColor":"#334155", "BorderWidth":1, "RoundHeight":15, "RoundWidth":15}');
+
+  PnlCanvasHeader = MainForm.AddNewProPanel(PnlCanvasCard, 'PnlCanvasHeader');
+  PnlCanvasHeader.Align = alTop; PnlCanvasHeader.Height = 45;
+  clComponent.SetupComponent(PnlCanvasHeader, '{"BackgroundColor":"#1E293B"}');
+
+  LblCanvasLogo = MainForm.AddNewProLabel(PnlCanvasHeader, 'LblCanvasLogo', 'Markanız');
+  LblCanvasLogo.Align = alLeft; LblCanvasLogo.Width = 150; LblCanvasLogo.Margins.Left = 15;
+  LblCanvasLogo.clProSettings.FontColor = clAlphaColor.clHexToColor('#10B981'); LblCanvasLogo.clProSettings.FontSize = 12;
+  LblCanvasLogo.clProSettings.TextSettings.Font.Style = [fsBold]; LblCanvasLogo.SetclProSettings(LblCanvasLogo.clProSettings);
+
+  LblCanvasRatioMode = MainForm.AddNewProLabel(PnlCanvasHeader, 'LblCanvasRatioMode', 'POST (1:1)');
+  LblCanvasRatioMode.Align = alRight; LblCanvasRatioMode.Width = 100; LblCanvasRatioMode.Margins.Right = 15;
+  LblCanvasRatioMode.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B'); 
+  LblCanvasRatioMode.SetclProSettings(LblCanvasRatioMode.clProSettings);
+
+  ImgCanvasMain = MainForm.AddNewImage(PnlCanvasCard, 'ImgCanvasMain');
+  ImgCanvasMain.Align = alClient; ImgCanvasMain.Margins.Left = 15; ImgCanvasMain.Margins.Right = 15; ImgCanvasMain.Margins.Bottom = 10;
+
+  LblCanvasTitle = MainForm.AddNewProLabel(PnlCanvasCard, 'LblCanvasTitle', 'Yeni Koleksiyon Keşfi');
+  LblCanvasTitle.Align = alBottom; LblCanvasTitle.Height = 35; LblCanvasTitle.Margins.Left = 15; LblCanvasTitle.Margins.Right = 15;
+  LblCanvasTitle.clProSettings.FontColor = clAlphaColor.clWhite; LblCanvasTitle.clProSettings.FontSize = 15;
+  LblCanvasTitle.clProSettings.TextSettings.Font.Style = [fsBold]; LblCanvasTitle.SetclProSettings(LblCanvasTitle.clProSettings);
+
+  LblCanvasDesc = MainForm.AddNewProLabel(PnlCanvasCard, 'LblCanvasDesc', 'Doğanın esintilerinden ilham alan benzersiz koleksiyonumuz şimdi yayında.');
+  LblCanvasDesc.Align = alBottom; LblCanvasDesc.Height = 50; LblCanvasDesc.Margins.Left = 15; LblCanvasDesc.Margins.Right = 15; LblCanvasDesc.Margins.Bottom = 5;
+  LblCanvasDesc.clProSettings.FontColor = clAlphaColor.clHexToColor('#94A3B8'); LblCanvasDesc.clProSettings.FontSize = 11;
+  LblCanvasDesc.clProSettings.WordWrap = True; LblCanvasDesc.SetclProSettings(LblCanvasDesc.clProSettings);
+
+  PnlCanvasFooter = MainForm.AddNewProPanel(PnlCanvasCard, 'PnlCanvasFooter');
+  PnlCanvasFooter.Align = alBottom; PnlCanvasFooter.Height = 35;
+  clComponent.SetupComponent(PnlCanvasFooter, '{"BackgroundColor":"#161E2E"}');
+
+  LblCanvasFooterText = MainForm.AddNewProLabel(PnlCanvasFooter, 'LblCanvasFooterText', '✨ AI Tasarım Şablon Motoru');
+  LblCanvasFooterText.Align = alClient; LblCanvasFooterText.Margins.Left = 15;
+  LblCanvasFooterText.clProSettings.FontColor = clAlphaColor.clHexToColor('#64748B'); LblCanvasFooterText.clProSettings.FontSize = 10;
+  LblCanvasFooterText.SetclProSettings(LblCanvasFooterText.clProSettings);
+
+  LytActionGroup = MainForm.AddNewLayout(LytRightCanvas, 'LytActionGroup');
+  LytActionGroup.Align = alBottom; LytActionGroup.Height = 50; LytActionGroup.Margins.Bottom = 20;
+
+  BtnDownloadGorsel = MainForm.AddNewProButton(LytActionGroup, 'BtnDownloadGorsel', '💾 GÖRSELİ İNDİR');
+  BtnDownloadGorsel.Align = alLeft; BtnDownloadGorsel.Width = 200;
+  BtnDownloadGorsel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#10B981'); BtnDownloadGorsel.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnDownloadGorsel.clProSettings.RoundHeight = 8; BtnDownloadGorsel.SetclProSettings(BtnDownloadGorsel.clProSettings);
+  MainForm.AddNewEvent(BtnDownloadGorsel, tbeOnClick, 'ShowMessage("Görsel Atayüz galerinize indirildi!")');
+
+  BtnShareGorsel = MainForm.AddNewProButton(LytActionGroup, 'BtnShareGorsel', '📤 ANINDA PAYLAŞ');
+  BtnShareGorsel.Align = alClient; BtnShareGorsel.Margins.Left = 15;
+  BtnShareGorsel.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#0EA5E9'); BtnShareGorsel.clProSettings.FontColor = clAlphaColor.clWhite;
+  BtnShareGorsel.clProSettings.RoundHeight = 8; BtnShareGorsel.SetclProSettings(BtnShareGorsel.clProSettings);
+  MainForm.AddNewEvent(BtnShareGorsel, tbeOnClick, 'ShowMessage("Meta Graph API entegrasyonu ile yayına gönderildi!")');
+}
+
+{
+  MainForm = TclForm.Create(Self);
+  MainForm.LytTopBar.Visible = False;
+  MainForm.SetFormColor('#0F172A', '#0F172A', clGNone);
+
+  HeaderKurulum;
+  SolSimulatorKurulum;
+  SagKanvasKurulum;
+
+  MainForm.Run;
+}

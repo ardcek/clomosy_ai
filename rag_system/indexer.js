@@ -87,6 +87,28 @@ async function processFile(filePath) {
     }
 }
 
+// Dosya silme / veri temizleme
+async function deleteFile(filePath) {
+    try {
+        let deletedCount = 0;
+        const keys = Array.from(miniSearch._idToShortId.keys());
+        for (const id of keys) {
+            if (id.startsWith(filePath + "_")) {
+                try {
+                    miniSearch.discard(id);
+                    deletedCount++;
+                } catch (e) {}
+            }
+        }
+        if (deletedCount > 0) {
+            fs.writeFileSync(DB_PATH, JSON.stringify(miniSearch));
+            console.log(`[RAG] Silindi: ${path.basename(filePath)} (${deletedCount} parça veritabanından kaldırıldı)`);
+        }
+    } catch (e) {
+        console.error(`[RAG] Silme Hatası - ${filePath}:`, e.message);
+    }
+}
+
 // Sistemi Başlat
 async function start() {
     console.log("[RAG] Sistem Başlatıldı (MiniSearch Motoru - 0 Token, 0 İnternet). Klasörler izleniyor...");
@@ -107,7 +129,13 @@ async function start() {
            if (['.tro', '.md', '.pdf'].includes(path.extname(filePath).toLowerCase())) {
               await processFile(filePath);
           }
+      })
+      .on('unlink', async filePath => {
+          if (['.tro', '.md', '.pdf'].includes(path.extname(filePath).toLowerCase())) {
+              await deleteFile(filePath);
+          }
       });
 }
 
 start();
+

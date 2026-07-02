@@ -1,0 +1,128 @@
+var
+  clRest, fbRest, logRest, updRest: TclRest;
+  p_Baslik, p_Aciklama, p_Platform, p_Tarih, p_Saat, p_Key: String;
+  isTimerRunning: Boolean;
+
+void GonderInstagram;
+{
+  logRest.BaseURL = FIREBASE_URL + '/paylasim_gecmisi.json?auth=' + DB_SECRET;
+  logRest.Method = rmPOST;
+  logRest.ContentType = 'application/json';
+  logRest.AddBody('{"baslik":"' + p_Baslik + '","platform":"instagram","zaman":"' + p_Saat + '","durum":"gonderildi"}', 'application/json');
+  logRest.Execute;
+}
+
+void GonderFacebook;
+{
+  fbRest.BaseURL = 'https://graph.facebook.com/v25.0/' + FB_PAGE_ID + '/feed?access_token=' + FB_ACCESS_TOKEN;
+  fbRest.Method = rmPOST;
+  fbRest.ContentType = 'application/json';
+  fbRest.AddBody('{"message":"' + p_Baslik + '\\n\\n' + p_Aciklama + '"}', 'application/json');
+  fbRest.Execute;
+
+  logRest.BaseURL = FIREBASE_URL + '/paylasim_gecmisi.json?auth=' + DB_SECRET;
+  logRest.Method = rmPOST;
+  logRest.ContentType = 'application/json';
+  logRest.AddBody('{"baslik":"' + p_Baslik + '","platform":"facebook","zaman":"' + p_Saat + '","durum":"gonderildi"}', 'application/json');
+  logRest.Execute;
+}
+
+void GuncelleFirebaseDurum(AKey, ADurum: String);
+{
+  updRest.BaseURL = FIREBASE_URL + '/icerikler/' + AKey + '.json?auth=' + DB_SECRET;
+  updRest.Method = rmPATCH;
+  updRest.ContentType = 'application/json';
+  updRest.AddBody('{"durum":"' + ADurum + '"}', 'application/json');
+  updRest.Execute;
+}
+
+void PaylasimKontrol;
+var
+  response, tempSection, onKisim, tempKey, kayitKey: String;
+  platform, baslik, aciklama, tarih, saat, durum: String;
+  simdikiTarih, simdikiSaat: String;
+  pos, keyStart, keyEnd: Integer;
+  gonderimBasladi: Boolean;
+{
+  if (otomatikAktif == False) Exit;
+  if (isTimerRunning == True) Exit;
+
+  isTimerRunning = True;
+  gonderimBasladi = False;
+  simdikiTarih = FormatDateTime('yyyy-mm-dd', Now);
+  simdikiSaat = FormatDateTime('hh:nn', Now);
+
+  clRest.BaseURL = FIREBASE_URL + '/icerikler.json?auth=' + DB_SECRET;
+  clRest.Method = rmGET;
+  clRest.Execute;
+  response = clRest.Response;
+  
+  if ((response == '') || (response == 'null')) 
+  {
+    isTimerRunning = False;
+    Exit;
+  }
+
+  pos = Pos('"baslik":"', response);
+  while (pos > 0)
+  {
+    tempSection = Copy(response, pos, Length(response) - pos + 1);
+    
+    baslik = ClGetStringAfter(tempSection, '"baslik":"'); baslik = ClGetStringTo(baslik, '"');
+    aciklama = ClGetStringAfter(tempSection, '"aciklama":"'); aciklama = ClGetStringTo(aciklama, '"');
+    platform = ClGetStringAfter(tempSection, '"platform":"'); platform = ClGetStringTo(platform, '"');
+    tarih = ClGetStringAfter(tempSection, '"tarih":"'); tarih = ClGetStringTo(tarih, '"');
+    saat = ClGetStringAfter(tempSection, '"saat":"'); saat = ClGetStringTo(saat, '"');
+    durum = ClGetStringAfter(tempSection, '"durum":"'); durum = ClGetStringTo(durum, '"');
+    
+    if (durum == 'planl&&i')
+    {
+      if ((tarih == simdikiTarih) && (saat <= simdikiSaat))
+      {
+        onKisim = Copy(response, 1, pos - 1);
+        keyStart = Pos('{"', onKisim);
+        kayitKey = '';
+        if (keyStart > 0)
+          {
+          tempKey = Copy(onKisim, keyStart + 2, Length(onKisim) - keyStart - 1);
+          keyEnd = Pos('":{', tempKey);
+          if (keyEnd > 0) kayitKey = Copy(tempKey, 1, keyEnd - 1);
+        }
+        
+        if (kayitKey <> '')
+        {
+          p_Baslik = baslik;
+          p_Aciklama = aciklama;
+          p_Platform = platform;
+          p_Tarih = tarih;
+          p_Saat = simdikiSaat;
+          p_Key = kayitKey;
+          
+          GuncelleFirebaseDurum(p_Key, 'gonderiliyor');
+          gonderimBasladi = True;
+          Break;
+        }
+      }
+    }
+    
+    tempSection = ClGetStringAfter(tempSection, '"durum":"');
+    tempSection = ClGetStringAfter(tempSection, '"');
+    response = tempSection;
+    pos = Pos('"baslik":"', response);
+  }
+
+  if (gonderimBasladi == True)
+  {
+    if (Pos('instagram', p_Platform) > 0)
+    {
+      GonderInstagram;
+    }
+    if (Pos('facebook', p_Platform) > 0)
+    {
+      GonderFacebook;
+    }
+    GuncelleFirebaseDurum(p_Key, 'gonderildi');
+  }
+
+  isTimerRunning = False;
+}

@@ -47,20 +47,35 @@ Bu sistem, [Clomosy](https://clomosy.com) platformunun tescilli dili **TRObject*
 ## 📁 Proje Yapısı
 
 ```
-clomosy-ai/
-├── 📄 clomosy_ai_trainer.js       # Dokümantasyon web tarayıcısı (265 sayfa)
-├── 📄 clomosy_ai_trainer.py       # Python alternatifi
+clomosy/
+├── 📂 _scripts/                  # Yardımcı scriptler ve eğitim araçları
+│   ├── 📄 clomosy_ai_trainer.js   # Dokümantasyon web tarayıcısı (265 sayfa)
+│   ├── 📄 clomosy_ai_trainer.py   # Python alternatifi
+│   ├── 📄 md2html.js / .py        # Markdown'dan HTML'e dönüştürücüler
+│   └── 📄 read_pdf.cjs / .mjs     # PDF okuma yardımcı scriptleri
 │
-├── 📂 rag_system/
-│   ├── 📄 indexer.js              # Dosya watcher + chunker + indeksleyici
-│   ├── 📄 search.js               # CLI arama arayüzü
-│   ├── 📄 package.json            # Node.js bağımlılıkları
-│   └── 📄 vector_db.json          # Yerel vektör veritabanı (auto-generated)
+├── 📂 knowledge_base/            # Clomosy AI Bilgi Bankası ve Referans Kitapları
+│   ├── 📄 TRObject_AI_KnowledgeBase.md   # Tüm Clomosy dökümantasyonu (Markdown)
+│   ├── 📄 TRObject_AI_KnowledgeBase.json # Tüm Clomosy dökümantasyonu (JSON)
+│   ├── 📄 TRObject_Complete_Reference.md # Hızlı boot referansı
+│   └── 📄 TRObject_Documentory.md        # Detaylı dil rehberi
 │
-├── 📄 TRObject_AI_KnowledgeBase.md   # Tüm Clomosy dökümantasyonu (Markdown)
-├── 📄 TRObject_AI_KnowledgeBase.json # Tüm Clomosy dökümantasyonu (JSON/RAG)
-├── 📄 TRObject_Complete_Reference.md # TRObject dil referansı
-└── 📄 TRObject_Documentory.md        # TRObject detaylı dokümantasyon
+├── 📂 pdfs/                      # Kitaplar ve PDF Dokümanları
+│   ├── 📄 clomosy_kitap.pdf      # Clomosy Resmi Eğitim Kitabı V1 (Türkçe)
+│   └── 📄 ClomosyKitapV2.pdf     # Clomosy Kitabı V2 (Yeni Sürüm)
+│
+├── 📂 docs_html/                 # Scraped / yedeklenmiş HTML dokümanları
+│   └── ...
+│
+├── 📂 rag_system/                # Yerel RAG (Arama ve Bellek) Sistemi
+│   ├── 📄 indexer.js             # Dosya watcher + chunker + indeksleyici (Geliştirilmiş)
+│   ├── 📄 search.js              # CLI arama arayüzü
+│   ├── 📄 package.json           # Node.js bağımlılıkları
+│   └── 📄 vector_db.json         # Yerel arama veritabanı (auto-generated)
+│
+├── 📂 _misc/                     # Geçici / yedek kod dosyaları (MainCode kopyaları vb.)
+│
+└── 📂 [Proje Klasörleri]/        # GitHub'dan klonlanmış Clomosy TRObject projeleri
 ```
 
 ---
