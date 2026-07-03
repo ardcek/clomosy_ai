@@ -1,0 +1,610 @@
+/* CSS Reset & Variables */
+:root {
+  --bg-main: #06070d;
+  --bg-panel: rgba(13, 16, 27, 0.65);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(99, 102, 241, 0.4);
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --secondary: #a855f7;
+  --accent: #14b8a6;
+  --error: #ef4444;
+  --console-bg: #090a0f;
+  --font-sans: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Glowing Background Orbs */
+.glow-orb {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  filter: blur(140px);
+  z-index: -1;
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.orb-1 {
+  background: var(--primary);
+  top: 10%;
+  left: 5%;
+}
+
+.orb-2 {
+  background: var(--secondary);
+  bottom: 10%;
+  right: 5%;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Main Container Layout */
+.app-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 750px;
+}
+
+/* Header Styling */
+.app-header {
+  margin-bottom: 24px;
+}
+
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.logo-icon {
+  color: var(--primary);
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+}
+
+.app-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.app-header h1 span {
+  font-weight: 300;
+  color: var(--text-muted);
+}
+
+.header-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* Workspace Panels Split Layout */
+.workspace {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 24px;
+  flex: 1;
+  min-height: 0; /* Important for inner vertical scroll */
+}
+
+/* Glassmorphic Panel Base Styles */
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  transition: border-color 0.3s;
+}
+
+.panel:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-header svg {
+  color: var(--primary);
+}
+
+.panel-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Control Panel Section Layout */
+.control-panel {
+  padding-bottom: 0;
+  overflow-y: auto;
+}
+
+/* Control Groups inside Left Panel */
+.control-group {
+  padding: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.control-group h3 {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--primary);
+  margin-bottom: 16px;
+}
+
+/* Standard input fields */
+.field {
+  margin-bottom: 16px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Styled Select Elements */
+.select-wrapper {
+  position: relative;
+}
+
+.select-wrapper::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--text-muted);
+  pointer-events: none;
+}
+
+select {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+select:focus {
+  border-color: var(--primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+/* Styled Range Sliders */
+input[type="range"] {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary);
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Toggles Grid layout */
+.toggles-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-switch input {
+  display: none;
+}
+
+.toggle-switch .slider {
+  width: 34px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s;
+}
+
+.toggle-switch .slider::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: white;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .slider {
+  background: var(--primary);
+}
+
+.toggle-switch input:checked + .slider::after {
+  transform: translateX(16px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--text-main);
+}
+
+/* API Sandbox Group Styles */
+.sandbox-group {
+  border-bottom: none;
+}
+
+.sandbox-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* API Sandbox Grid Buttons */
+.sandbox-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--border-active);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-api .api-name {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.btn-api .api-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Executed Code Sandbox Box */
+.code-execution-viewer {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.viewer-header {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.code-execution-viewer pre {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #fff;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Console Terminal Log Box */
+.console-box {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--console-bg);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.console-header {
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-color);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.console-header button {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--font-sans);
+}
+
+.console-header button:hover {
+  text-decoration: underline;
+}
+
+.console-output {
+  height: 100px;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.log-line {
+  word-break: break-all;
+  border-left: 2px solid transparent;
+  padding-left: 6px;
+}
+
+.log-line.system-msg {
+  color: var(--text-muted);
+  border-left-color: var(--primary);
+}
+
+.log-line.api-call {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.log-line.result-success {
+  color: #3fb950;
+  border-left-color: #3fb950;
+}
+
+/* IDE Editor Window Frame (Right Panel) */
+.ide-window {
+  background: #0f111a;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* IDE Titlebar Styles */
+.window-titlebar {
+  background: #090a0f;
+  border-bottom: 1px solid var(--border-color);
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.window-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-close { background: #ff5f56; }
+.dot-minimize { background: #ffbd2e; }
+.dot-maximize { background: #27c93f; }
+
+/* File Tabs in IDE Titlebar */
+.file-tabs {
+  margin-left: 20px;
+  display: flex;
+  height: 100%;
+}
+
+.tab {
+  background: #0f111a;
+  border-right: 1px solid var(--border-color);
+  border-left: 1px solid var(--border-color);
+  border-top: 2px solid var(--primary);
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #fff;
+  height: 100%;
+  margin-top: -1px;
+}
+
+.tab-icon {
+  color: var(--accent);
+}
+
+/* Editor Toolbar Action Buttons */
+.editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.editor-actions button {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.editor-actions button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.editor-actions button svg {
+  color: var(--text-muted);
+}
+
+.editor-actions button:hover svg {
+  color: var(--primary);
+}
+
+/* Main Editor container */
+#editor-container {
+  flex: 1;
+  width: 100%;
+  min-height: 0; /* Critical for flexing inside container */
+}
+
+/* Statusbar at the bottom of the IDE frame */
+.window-statusbar {
+  background: #090a0f;
+  border-top: 1px solid var(--border-color);
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+}
+
+.status-left, .status-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.15);
+}
+
+/* Ace Custom Classes adjustments */
+.ace_editor {
+  font-family: var(--font-mono) !important;
+  font-size: 14px;
+}
