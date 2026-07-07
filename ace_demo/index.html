@@ -1,238 +1,632 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ace Editor Interactive Playground</title>
-  <!-- Google Fonts: Outfit (UI) and JetBrains Mono (Code) -->
+  <!-- Google Fontları: Arayüz için Outfit ve Kod için JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-  <!-- Glow Backgrounds -->
+  <!-- Arka Plan Işık Küreleri -->
   <div class="glow-orb orb-1"></div>
   <div class="glow-orb orb-2"></div>
 
   <div class="app-container">
-    <!-- Header -->
+    <!-- Başlık -->
     <header class="app-header">
       <div class="header-logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="logo-icon"><path d="M14.5 17.5 3 6V3h18v3l-11.5 11.5z"/><path d="M3 21h18"/></svg>
-        <h1>Ace Editor <span>Interactive Showcase</span></h1>
+        <h1>Ace Editor <span>Interactive Showcase V3</span></h1>
       </div>
-      <p class="header-subtitle">Ace Editor (Ace JS) özelliklerini, temalarını, dillerini ve Javascript API fonksiyonlarını canlı olarak deneyimleyin.</p>
+      <p class="header-subtitle">Ace Editor (Ace JS) özelliklerini, temalarını, dillerini ve Javascript API
+        fonksiyonlarını canlı olarak deneyimleyin.</p>
     </header>
 
-    <!-- Main Workspace -->
+    <!-- Ana Çalışma Alanı -->
     <main class="workspace">
-      
-      <!-- Left Panel: Control Center & JS Sandbox -->
-      <section class="panel control-panel">
+
+      <!-- VS Code-style Activity Bar (Sol İkon Çubuğu) -->
+      <div class="activity-bar">
+        <button class="activity-btn active" data-tab="settings" title="Görünüm & Ayarlar">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </button>
+        <button class="activity-btn conditional-btn" data-tab="snippets" title="Hazır Kütüphaneler & Kod Blokları">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10 9 9 9 8 9" />
+          </svg>
+        </button>
+        <button class="activity-btn conditional-btn" data-tab="sandbox" title="API Sandbox Canlı Çağrı">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+        </button>
+        <button class="activity-btn conditional-btn" data-tab="docs" title="Clomosy Dokümantasyon Kitaplığı">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Sol Panel: Katmanlı Ayarlar ve Yardımcı Çekmece -->
+      <section class="panel control-panel" id="main-control-panel">
         <div class="panel-header">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <h2>Kontrol Paneli</h2>
+          <svg id="panel-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          <h2 id="panel-title-text">Ayarlar & Görünüm</h2>
         </div>
 
-        <!-- Group: Editor Appearance -->
-        <div class="control-group">
-          <h3>Görünüm ve Tema</h3>
-          
-          <div class="field">
-            <label for="theme-select">Editör Teması</label>
-            <div class="select-wrapper">
-              <select id="theme-select">
-                <option value="monokai">Monokai (Dark)</option>
-                <option value="dracula" selected>Dracula (Dark)</option>
-                <option value="solarized_dark">Solarized Dark (Dark)</option>
-                <option value="twilight">Twilight (Dark)</option>
-                <option value="github">GitHub (Light)</option>
-                <option value="chrome">Chrome (Light)</option>
-              </select>
+        <!-- 1. GÖRÜNÜM VE TEMA AYARLARI -->
+        <div id="section-settings" class="sidebar-section active">
+          <!-- Grup: Editör Görünümü -->
+          <div class="control-group">
+            <h3>Görünüm ve Tema</h3>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="theme-select">Editör Teması</label>
+                <div class="select-wrapper">
+                  <select id="theme-select">
+                    <option value="monokai">Monokai (Dark)</option>
+                    <option value="dracula" selected>Dracula (Dark)</option>
+                    <option value="solarized_dark">Solarized Dark (Dark)</option>
+                    <option value="twilight">Twilight (Dark)</option>
+                    <option value="github">GitHub (Light)</option>
+                    <option value="chrome">Chrome (Light)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label for="mode-select">Yazılım Dili (Mode)</label>
+                <div class="select-wrapper">
+                  <select id="mode-select">
+                    <option value="" disabled selected>Dosya seçiniz...</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="html">HTML</option>
+                    <option value="css">CSS</option>
+                    <option value="python">Python</option>
+                    <option value="json">JSON</option>
+                    <option value="sql">SQL</option>
+                    <option value="pascal">Pascal / Delphi (TRObject)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="keybindings-select">Klavye Düzeni (Keybinding)</label>
+                <div class="select-wrapper">
+                  <select id="keybindings-select">
+                    <option value="default">Varsayılan (Ace)</option>
+                    <option value="vim">Vim Modu</option>
+                    <option value="emacs">Emacs Modu</option>
+                  </select>
+                </div>
+              </div>
+              <div class="field">
+                <label for="tab-size-select">Girinti (Tab Size)</label>
+                <div class="select-wrapper">
+                  <select id="tab-size-select">
+                    <option value="2">2 Boşluk</option>
+                    <option value="4" selected>4 Boşluk</option>
+                    <option value="8">8 Boşluk</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="font-size-slider">Yazı Boyutu: <span id="font-size-val">14px</span></label>
+                <input type="range" id="font-size-slider" min="10" max="24" value="14" step="1">
+              </div>
+              <div class="field">
+                <label for="line-height-slider">Satır Aralığı: <span id="line-height-val">1.5</span></label>
+                <input type="range" id="line-height-slider" min="1.1" max="2.0" value="1.5" step="0.1">
+              </div>
             </div>
           </div>
 
-          <div class="field">
-            <label for="mode-select">Yazılım Dili (Mode)</label>
-            <div class="select-wrapper">
-              <select id="mode-select">
-                <option value="javascript">JavaScript</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="python">Python</option>
-                <option value="json">JSON</option>
-                <option value="sql">SQL</option>
-                <option value="pascal">Pascal / Delphi (TRObject)</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="font-size-slider">Yazı Boyutu: <span id="font-size-val">14px</span></label>
-              <input type="range" id="font-size-slider" min="10" max="24" value="14" step="1">
-            </div>
-            <div class="field">
-              <label for="line-height-slider">Satır Aralığı: <span id="line-height-val">1.5</span></label>
-              <input type="range" id="line-height-slider" min="1.1" max="2.0" value="1.5" step="0.1">
+          <!-- Grup: Seçenekler / Anahtarlar -->
+          <div class="control-group">
+            <h3>Editör Davranışları</h3>
+            <div class="toggles-grid">
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-gutter" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">Satır Numaraları</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-wrap" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">Metni Aşağı Kaydır (Wrap)</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-margin" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">Baskı Kılavuzu (Print Margin)</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-readonly">
+                <span class="slider"></span>
+                <span class="toggle-label">Salt Okunur (Read Only)</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-active-line" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">Aktif Satırı Vurgula</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-autocomplete" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">Otomatik Tamamlama</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-scroll-past-end">
+                <span class="slider"></span>
+                <span class="toggle-label">Son Satırdan Sonra Kaydır</span>
+              </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-autorun">
+                <span class="slider"></span>
+                <span class="toggle-label">Otomatik Çalıştır (Auto-Run)</span>
+              </label>
             </div>
           </div>
         </div>
 
-        <!-- Group: Options Toggles -->
-        <div class="control-group">
-          <h3>Editör Davranışları</h3>
-          <div class="toggles-grid">
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-gutter" checked>
-              <span class="slider"></span>
-              <span class="toggle-label">Satır Numaraları</span>
-            </label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-wrap" checked>
-              <span class="slider"></span>
-              <span class="toggle-label">Metni Aşağı Kaydır (Wrap)</span>
-            </label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-margin" checked>
-              <span class="slider"></span>
-              <span class="toggle-label">Baskı Kılavuzu (Print Margin)</span>
-            </label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-readonly">
-              <span class="slider"></span>
-              <span class="toggle-label">Salt Okunur (Read Only)</span>
-            </label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-active-line" checked>
-              <span class="slider"></span>
-              <span class="toggle-label">Aktif Satırı Vurgula</span>
-            </label>
-            <label class="toggle-switch">
-              <input type="checkbox" id="toggle-autocomplete" checked>
-              <span class="slider"></span>
-              <span class="toggle-label">Otomatik Tamamlama</span>
-            </label>
+        <!-- 2. HAZIR KÜTÜPHANELER VE ŞABLONLAR -->
+        <div id="section-snippets" class="sidebar-section">
+          <div class="control-group" id="snippet-group-sql">
+            <h3>SQL Veritabanı Şablonları</h3>
+            <div class="snippet-buttons">
+              <button class="btn btn-snippet" data-snippet="sql-connection" title="Sqlite / SQL Server Bağlantısı">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                <span>Sqlite - SqlServer Bağlantısı</span>
+              </button>
+              <button class="btn btn-snippet" data-snippet="sql-report" title="Gelişmiş Filtreleme & Rapor">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                  <path d="M22 12A10 10 0 0 0 12 2v10z" />
+                </svg>
+                <span>Gelişmiş Raporlama Sorgusu</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group" id="snippet-group-web">
+            <h3>Web (HTML/JS) Arayüz Kütüphanesi</h3>
+            <div class="snippet-buttons">
+              <button class="btn btn-snippet" data-snippet="web-login" title="Kullanıcı Giriş Ekranı Formu">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                </svg>
+                <span>Giriş Ekranı (Login Form)</span>
+              </button>
+              <button class="btn btn-snippet" data-snippet="web-mail" title="E-posta Gönderme Form Arayüzü">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  <polyline points="22,6 12,13 2,6" />
+                </svg>
+                <span>E-posta Formu (Mail Form)</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group" id="snippet-group-py">
+            <h3>Python Şablonları</h3>
+            <div class="snippet-buttons">
+              <button class="btn btn-snippet" data-snippet="py-unittest" title="Python unittest Modülü">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="22 11.08 22 12 12 22 2 12 12 2 22 12 22 12.92" />
+                </svg>
+                <span>Python Unit Test Şablonu</span>
+              </button>
+              <button class="btn btn-snippet" data-snippet="py-analysis" title="Veri Analiz & İstatistik Hesaplama">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+                <span>Veri Analizi Simülasyonu</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="control-group" id="snippet-group-clomosy">
+            <h3>Clomosy Kütüphanesi</h3>
+            <div class="snippet-buttons">
+              <button class="btn btn-snippet" data-snippet="pas-form-components" title="Form Arayüzü & Temel Bileşenler">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M21 9H3M21 15H3M12 3v18" />
+                </svg>
+                <span>Arayüz & Temel Bileşenler</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-memo" title="Memo ile Çok Satırlı Editör Arayüzü">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+                <span>TclMemo Editör Arayüzü</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-image" title="Image Bileşeni & Web Görsel Yükleme">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                <span>TclImage Görsel Yükleme</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-listview" title="Custom ListView ile Veri Listeleme">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                <span>TclListView Veri Listesi</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-rest-api" title="TclRest ile Web REST API İstemcisi">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
+                </svg>
+                <span>TclRest HTTP API İstemcisi</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-sqlite" title="DBSQLite ile Yerel SQLite Veritabanı">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+                </svg>
+                <span>SQLite Yerel Veritabanı</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-sqlserver" title="DBSQLServerQuery ile Uzak MS SQL Server">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
+                  <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
+                  <line x1="6" y1="10" x2="6" y2="14" />
+                  <line x1="18" y1="10" x2="18" y2="14" />
+                </svg>
+                <span>SQL Server Bağlantısı</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-timer" title="TclTimer Zamanlayıcı & Sayaç">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>TclTimer Zamanlayıcı</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-sound" title="Ses Çalma & Oyun Efekti">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                </svg>
+                <span>Oyun Sesleri & PlaySound</span>
+              </button>
+              
+              <button class="btn btn-snippet" data-snippet="pas-gps" title="GPS Cihaz Konumu & Sensör Alımı">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>GPS / Cihaz Sensör Alımı</span>
+              </button>
+            </div>
           </div>
         </div>
 
-        <!-- Group: API Sandbox -->
-        <div class="control-group sandbox-group">
-          <h3>Javascript API Metotları (Canlı Çağrı)</h3>
-          <p class="sandbox-desc">Aşağıdaki API metotlarını tetikleyerek Ace editörünü JS koduyla yönlendirin:</p>
-          
-          <div class="sandbox-buttons">
-            <button class="btn btn-api" data-api="get-value">
-              <span class="api-name">editor.getValue()</span>
-              <span class="api-desc">İçeriği Al</span>
-            </button>
-            <button class="btn btn-api" data-api="select-all">
-              <span class="api-name">editor.selectAll()</span>
-              <span class="api-desc">Tümünü Seç</span>
-            </button>
-            <button class="btn btn-api" data-api="insert-text">
-              <span class="api-name">editor.insert("...")</span>
-              <span class="api-desc">İmlece Metin Ekle</span>
-            </button>
-            <button class="btn btn-api" data-api="find-text">
-              <span class="api-name">editor.find("...")</span>
-              <span class="api-desc">Metin Bul ve Vurgula</span>
-            </button>
-            <button class="btn btn-api" data-api="show-annotations">
-              <span class="api-name">setAnnotations()</span>
-              <span class="api-desc">Hata İşaretçisi Ekle</span>
-            </button>
-            <button class="btn btn-api" data-api="undo-redo">
-              <span class="api-name">undo() / redo()</span>
-              <span class="api-desc">Geri Al / İleri Al</span>
-            </button>
-          </div>
+        <!-- 3. CLOMOSY API & DB SANDBOX -->
+        <div id="section-sandbox" class="sidebar-section">
+          <div class="control-group sandbox-group">
+            <h3>Clomosy API & DB Sandbox</h3>
+            <p class="sandbox-desc">RESTful API isteklerini ve veritabanı sorgularını test edin, kodlarını anında kopyalayın:</p>
 
-          <!-- Executed Code Viewer -->
-          <div class="code-execution-viewer">
-            <div class="viewer-header">
-              <span>Çalıştırılan JS Kodu:</span>
+            <!-- Mode Selector Switch -->
+            <div class="sandbox-tabs" style="display: flex; gap: 8px; margin-bottom: 15px;">
+              <button class="btn btn-sandbox-tab active" id="btn-sandbox-rest" style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">REST API Test</button>
+              <button class="btn btn-sandbox-tab" id="btn-sandbox-db" style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">SQLite SQL Test</button>
             </div>
-            <pre><code id="executed-code">// Tetiklenen API fonksiyonu burada görünecek</code></pre>
-          </div>
 
-          <!-- Console Terminal Output -->
-          <div class="console-box">
-            <div class="console-header">
-              <span>Konsol Çıktısı (Logs)</span>
-              <button id="clear-console-btn">Temizle</button>
+            <!-- Panel 1: REST API Tester -->
+            <div id="sandbox-rest-panel" class="sandbox-panel-content">
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Hedef URL (REST API)</label>
+                <select id="sandbox-rest-url" style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 12px; margin-bottom: 8px;">
+                  <option value="https://api.github.com/users/octocat">GitHub User API (octocat)</option>
+                  <option value="https://fakestoreapi.com/products/1">Fake Store API (Product 1)</option>
+                  <option value="https://jsonplaceholder.typicode.com/todos/1">Placeholder API (Todo 1)</option>
+                </select>
+              </div>
+              <button class="btn" id="btn-sandbox-send-rest" style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">HTTP GET İsteği Gönder</button>
             </div>
-            <div class="console-output" id="console-log">
-              <div class="log-line system-msg">Sistem hazır. Test etmek için bir API metoduna tıklayın.</div>
+
+            <!-- Panel 2: SQLite Query Tester -->
+            <div id="sandbox-db-panel" class="sandbox-panel-content" style="display: none;">
+              <div style="margin-bottom: 10px;">
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">SQLite Sorgusu (SQL)</label>
+                <textarea id="sandbox-db-query" rows="2" style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 12px; resize: none; margin-bottom: 8px;">SELECT * FROM kullanicilar WHERE yas > 25;</textarea>
+              </div>
+              <button class="btn" id="btn-sandbox-run-query" style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">SQL Sorgusunu Yürüt</button>
+            </div>
+
+            <!-- JSON veya SQL Sonuç Alanı -->
+            <div class="code-execution-viewer" style="margin-top: 10px; margin-bottom: 12px;">
+              <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="sandbox-result-title">API Yanıtı (JSON):</span>
+              </div>
+              <pre style="max-height: 140px; overflow-y: auto; background: #090a0f; border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 10px; font-size: 11px; color: #a5d6ff; margin: 0;"><code id="sandbox-result-output">// İstek sonuçları burada görüntülenecektir</code></pre>
+            </div>
+
+            <!-- Clomosy Pascal Kodu Eşdeğeri -->
+            <div class="code-execution-viewer" style="margin-bottom: 15px;">
+              <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Eşdeğer Clomosy Kodu:</span>
+                <button id="btn-sandbox-inject-code" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.25); color: #c7d2fe; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer;">Koda Ekle</button>
+              </div>
+              <pre style="max-height: 100px; overflow-y: auto; background: #090a0f; border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 10px; font-size: 11px; color: #8bc34a; margin: 0;"><code id="sandbox-clomosy-code">// Clomosy Pascal karşılığı burada üretilecektir</code></pre>
+            </div>
+
+            <!-- Konsol Terminal Çıktısı -->
+            <div class="console-box">
+              <div class="console-header">
+                <span>Konsol Çıktısı (Logs)</span>
+                <button id="clear-console-btn">Temizle</button>
+              </div>
+              <div class="console-output" id="console-log">
+                <div class="log-line system-msg">Sistem hazır. Test etmek için bir API metoduna tıklayın.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. CLOMOSY DOKÜMANTASYON ARAMA VE DETAY KARTLARI -->
+        <div id="section-docs" class="sidebar-section">
+          <div class="control-group">
+            <h3>Doküman Kitaplığı</h3>
+            <p class="sandbox-desc">Clomosy fonksiyonlarını, olaylarını ve sınıflarını arayın. Koda hızlıca enjekte edin:</p>
+            <div class="field-row" style="margin-bottom: 12px; display: block;">
+              <div style="position: relative; width: 100%;">
+                <input type="text" id="docs-search-input" placeholder="Bileşen veya metot arayın... (Örn: Rest, GPS)" 
+                       style="width: 100%; padding: 8px 30px 8px 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 13px; outline: none; box-sizing: border-box;">
+                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #8b949e; pointer-events: none;">🔍</span>
+              </div>
+            </div>
+            
+            <div id="docs-results-container" class="docs-results-scroll" style="max-height: calc(100vh - 220px); overflow-y: auto; padding-right: 5px;">
+              <!-- Sonuçlar Javascript ile buraya dinamik dolacak -->
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Right Panel: IDE Window Mockup containing Ace Editor -->
+      <!-- Sağ Panel: Ace Editörünü içeren IDE Penceresi -->
       <section class="ide-window">
-        <!-- Mock Titlebar -->
+        <!-- IDE Başlık Çubuğu (Üst Kısım - Sadece Araçlar) -->
         <div class="window-titlebar">
           <div class="window-controls">
             <span class="dot dot-close"></span>
             <span class="dot dot-minimize"></span>
             <span class="dot dot-maximize"></span>
-          </div>
-          
-          <div class="file-tabs">
-            <div class="tab active">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
-              <span id="tab-filename">script.js</span>
-            </div>
+            <span class="titlebar-project-name">Clomosy AI Playground</span>
           </div>
 
-          <!-- Editor Actions -->
           <div class="editor-actions">
-            <button id="btn-format" title="Kodu Biçimlendir (js-beautify)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>
-              Biçimlendir
+            <button id="btn-download" title="Aktif Dosyayı Bilgisayara İndir">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              İndir
             </button>
+            <button id="btn-split" title="Yan Yana (Split) Görünümü Aç/Kapat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="12" y1="3" x2="12" y2="21" />
+              </svg>
+              Böl
+            </button>
+            <button id="btn-run" class="btn-run-glow" title="Kodu Çalıştır (Görsel Canlı Önizleme)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Çalıştır
+            </button>
+            <button id="btn-search" title="Arama & Değiştirme Kutusunu Aç (Ctrl+F)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              Ara
+            </button>
+            <button id="btn-autofix" title="Clomosy Oto-Düzeltme / Linter (Ctrl+Shift+E)" style="color: #ff79c6;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2.5 21.5l14-14M16 3l5 5M2 2l3 3M22 22l-3-3" />
+                <path d="M15 15l1.5-1.5M10 10l1.5-1.5" />
+              </svg>
+              Oto-Düzelt
+            </button>
+
             <button id="btn-clear" title="Editörü Temizle">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              </svg>
               Temizle
             </button>
             <button id="btn-reset" title="Varsayılan Koda Dön">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 3h5v5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 21H3v-5"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M16 3h5v5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 21H3v-5" />
+              </svg>
               Sıfırla
             </button>
           </div>
         </div>
 
-        <!-- The actual Ace Editor DOM Element -->
-        <div id="editor-container"></div>
+        <!-- Sekmeler Satırı (Alt Kısım - Ayrı Satır Olarak Çakışmayı Önler) -->
+        <div class="tabs-row-container">
+          <div class="file-tabs" id="file-tabs-bar">
+            <div class="tab" data-file="javascript" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-js">JS</span>
+              <span>script.js</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="html" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-html">HTML</span>
+              <span>index.html</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="css" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-css">CSS</span>
+              <span>style.css</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="python" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-py">PY</span>
+              <span>main.py</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="json" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-json">JSON</span>
+              <span>package.json</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="sql" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-sql">SQL</span>
+              <span>queries.sql</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
+            <div class="tab" data-file="pascal" data-tab="editor-view" style="display: none;">
+              <span class="tab-icon-tro">TRO</span>
+              <span>mainCode.tro</span>
+              <span class="tab-close-btn">&times;</span>
+            </div>
 
-        <!-- Window Statusbar -->
+            <div class="tab-separator" id="preview-tab-separator" style="display: none;">|</div>
+
+            <div class="tab" data-tab="preview-view" id="tab-preview-btn" style="display: none;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                class="tab-icon-preview">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              <span>Canlı Önizleme</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editör ve Önizleme İçerik Alanı -->
+        <div class="window-content">
+
+          <!-- Hoş Geldiniz / Boş Ekran Görünümü -->
+          <div id="welcome-screen" class="welcome-screen tab-content active">
+            <div class="welcome-logo">
+            </div>
+            <h2>Ace Editor Web IDE'ye Hoş Geldiniz</h2>
+            <p class="welcome-subtitle">Kodlarınızı düzenlemek, test etmek veya canlı emülatörde çalıştırmak için bir
+              dosya açın:</p>
+            <div class="quick-files-grid">
+              <button class="quick-file-btn" onclick="openFileFromWelcome('javascript')">
+                <span class="tab-icon-js">JS</span> script.js
+              </button>
+              <button class="quick-file-btn" onclick="openFileFromWelcome('html')">
+                <span class="tab-icon-html">HTML</span> index.html
+              </button>
+              <button class="quick-file-btn" onclick="openFileFromWelcome('css')">
+                <span class="tab-icon-css">CSS</span> style.css
+              </button>
+              <button class="quick-file-btn" onclick="openFileFromWelcome('pascal')">
+                <span class="tab-icon-tro">TRO</span> mainCode.tro (Clomosy)
+              </button>
+              <button class="quick-file-btn" onclick="openFileFromWelcome('python')">
+                <span class="tab-icon-py">PY</span> main.py
+              </button>
+              <button class="quick-file-btn" onclick="openFileFromWelcome('sql')">
+                <span class="tab-icon-sql">SQL</span> queries.sql
+              </button>
+            </div>
+          </div>
+
+          <div id="editor-container" class="tab-content"></div>
+          <div id="preview-container" class="tab-content">
+            <iframe id="preview-iframe" sandbox="allow-scripts allow-modals"></iframe>
+          </div>
+        </div>
+
+        <!-- Pencere Durum Çubuğu -->
         <div class="window-statusbar">
           <div class="status-left">
-            <span id="status-lang">Dil: JavaScript</span>
+            <span id="status-lang">Dosya Açık Değil</span>
             <span class="separator">|</span>
-            <span id="status-lines">Toplam: 1 Satır</span>
+            <span id="status-lines">Toplam: 0 Satır</span>
           </div>
           <div class="status-right">
             <span id="status-selection">Seçim: 0 karakter</span>
             <span class="separator">|</span>
-            <span id="status-position">Satır 1, Sütun 1</span>
+            <span id="status-position">Satır 0, Sütun 0</span>
           </div>
         </div>
       </section>
 
     </main>
+
+    <!-- Footer -->
+    <footer class="app-footer-custom">
+      <p><a href="https://ardcek.com" target="_blank">ardcek.com</a> | Arda Çekiç | Tüm Hakları Saklıdır</p>
+    </footer>
   </div>
 
-  <!-- Loaded from Cdnjs: Main Ace JS library -->
+  <!-- Cdnjs'ten Yüklenen: Ana Ace JS Kütüphanesi -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
-  <!-- Loaded from Cdnjs: Ace Language Tools (Autocompletion / Snippets) -->
+  <!-- Cdnjs'ten Yüklenen: Ace Dil Araçları (Otomatik Tamamlama / Kod Şablonları) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.min.js"></script>
-  <!-- Loaded from Cdnjs: Js-Beautify for code formatting -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautifier.min.js"></script>
-  
+  <!-- Cdnjs'ten Yüklenen: Arama ve Değiştirme Eklentisi -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-searchbox.min.js"></script>
+  <!-- Cdnjs'ten Yüklenen: Vim Tuş Kombinasyonları -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/keybinding-vim.min.js"></script>
+  <!-- Cdnjs'ten Yüklenen: Emacs Tuş Kombinasyonları -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/keybinding-emacs.min.js"></script>
+
+
   <script src="script.js"></script>
 </body>
+
 </html>

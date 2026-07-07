@@ -1,4 +1,4 @@
-/* CSS Reset & Variables */
+/* CSS Sıfırlama ve Değişkenleri */
 :root {
   --bg-main: #06070d;
   --bg-panel: rgba(13, 16, 27, 0.65);
@@ -32,7 +32,7 @@ body {
   line-height: 1.5;
 }
 
-/* Glowing Background Orbs */
+/* Parlayan Arka Plan Işık Küreleri */
 .glow-orb {
   position: absolute;
   width: 400px;
@@ -56,7 +56,7 @@ body {
   right: 5%;
 }
 
-/* Scrollbar Customization */
+/* Kaydırma Çubuğu Özelleştirmesi */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -75,7 +75,7 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* Main Container Layout */
+/* Ana Kapsayıcı Düzeni */
 .app-container {
   max-width: 1600px;
   margin: 0 auto;
@@ -86,7 +86,7 @@ body {
   min-height: 750px;
 }
 
-/* Header Styling */
+/* Başlık Tasarımı */
 .app-header {
   margin-bottom: 24px;
 }
@@ -120,16 +120,15 @@ body {
   color: var(--text-muted);
 }
 
-/* Workspace Panels Split Layout */
+/* Çalışma Alanı Panel Düzeni */
 .workspace {
-  display: grid;
-  grid-template-columns: 460px 1fr;
-  gap: 24px;
+  display: flex;
+  gap: 20px;
   flex: 1;
   min-height: 0; /* Important for inner vertical scroll */
 }
 
-/* Glassmorphic Panel Base Styles */
+/* Glassmorphic Panel Temel Stilleri */
 .panel {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
@@ -165,13 +164,32 @@ body {
   color: #fff;
 }
 
-/* Control Panel Section Layout */
+/* Kontrol Paneli Bölüm Düzeni */
 .control-panel {
-  padding-bottom: 0;
+  width: 380px;
+  min-width: 380px;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s, margin 0.3s;
+  opacity: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 0;
 }
 
-/* Control Groups inside Left Panel */
+.control-panel.collapsed {
+  width: 0px;
+  min-width: 0px;
+  opacity: 0;
+  margin-right: -20px;
+  border: none;
+  pointer-events: none;
+}
+
+.ide-window {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Sol Panel Kontrol Grupları */
 .control-group {
   padding: 20px;
   border-bottom: 1px solid var(--border-color);
@@ -186,7 +204,7 @@ body {
   margin-bottom: 16px;
 }
 
-/* Standard input fields */
+/* Standart Girdi Alanları */
 .field {
   margin-bottom: 16px;
 }
@@ -209,7 +227,7 @@ body {
   gap: 16px;
 }
 
-/* Styled Select Elements */
+/* Özelleştirilmiş Seçim Elemanları */
 .select-wrapper {
   position: relative;
 }
@@ -246,7 +264,7 @@ select:focus {
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
-/* Styled Range Sliders */
+/* Özelleştirilmiş Kaydırma Çubukları (Range) */
 input[type="range"] {
   width: 100%;
   height: 5px;
@@ -271,14 +289,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.2);
 }
 
-/* Toggles Grid layout */
+/* Anahtarların Izgara Düzeni */
 .toggles-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-/* Toggle Switch Styles */
+/* Anahtar (Switch) Stilleri */
 .toggle-switch {
   display: flex;
   align-items: center;
@@ -325,7 +343,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--text-main);
 }
 
-/* API Sandbox Group Styles */
+/* API Sandbox Grup Stilleri */
 .sandbox-group {
   border-bottom: none;
 }
@@ -336,7 +354,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   margin-bottom: 16px;
 }
 
-/* API Sandbox Grid Buttons */
+/* API Sandbox Düğme Izgarası */
 .sandbox-buttons {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -381,7 +399,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--text-muted);
 }
 
-/* Executed Code Sandbox Box */
+/* Çalıştırılan Kod Gösterim Kutusu */
 .code-execution-viewer {
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
@@ -407,7 +425,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   word-break: break-all;
 }
 
-/* Console Terminal Log Box */
+/* Konsol Terminal Log Kutusu */
 .console-box {
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -474,7 +492,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   border-left-color: #3fb950;
 }
 
-/* IDE Editor Window Frame (Right Panel) */
+/* IDE Editör Pencere Çerçevesi (Sağ Panel) */
 .ide-window {
   background: #0f111a;
   border: 1px solid var(--border-color);
@@ -485,7 +503,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   overflow: hidden;
 }
 
-/* IDE Titlebar Styles */
+/* IDE Başlık Çubuğu Stilleri */
 .window-titlebar {
   background: #090a0f;
   border-bottom: 1px solid var(--border-color);
@@ -512,7 +530,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .dot-minimize { background: #ffbd2e; }
 .dot-maximize { background: #27c93f; }
 
-/* File Tabs in IDE Titlebar */
+/* IDE Başlık Çubuğu Dosya Sekmeleri */
 .file-tabs {
   margin-left: 20px;
   display: flex;
@@ -538,7 +556,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--accent);
 }
 
-/* Editor Toolbar Action Buttons */
+/* Editör Araç Çubuğu İşlem Butonları */
 .editor-actions {
   display: flex;
   gap: 8px;
@@ -572,14 +590,117 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--primary);
 }
 
-/* Main Editor container */
-#editor-container {
+/* Window Content & Tab Switchers */
+.window-content {
   flex: 1;
+  position: relative;
+  min-height: 0;
   width: 100%;
-  min-height: 0; /* Critical for flexing inside container */
 }
 
-/* Statusbar at the bottom of the IDE frame */
+.tab-content {
+  display: none;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Ana Editör Kapsayıcısı */
+#editor-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Önizleme Kapsayıcısı ve Iframe */
+#preview-container {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+#preview-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #ffffff;
+}
+
+/* Kodu Çalıştır Buton Işıması */
+.btn-run-glow {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  transition: all 0.3s ease;
+}
+
+.btn-run-glow:hover {
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.55);
+  transform: translateY(-1px);
+}
+
+.btn-run-glow svg {
+  color: #ffffff !important;
+}
+
+/* Tıklanabilir Sekme Stilleri */
+.tab {
+  cursor: pointer;
+  transition: background-color 0.2s, border-top-color 0.2s, color 0.2s;
+}
+
+.tab:not(.active) {
+  background: #06070d !important;
+  border-top-color: transparent !important;
+  color: var(--text-muted) !important;
+}
+
+.tab:not(.active):hover {
+  background: #0d0f17 !important;
+  color: #ffffff !important;
+}
+
+
+/* Split Görünüm (Split Screen) Stilleri */
+.window-content.split-mode {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.window-content.split-mode .tab-content {
+  position: relative !important;
+  display: block !important;
+  flex: 1 !important;
+  width: 50% !important;
+  height: 100% !important;
+  border-right: 1px solid var(--border-color);
+}
+
+.window-content.split-mode #preview-container {
+  border-right: none !important;
+}
+
+/* Böl Butonu Aktif Durumu */
+#btn-split.active-split {
+  background: rgba(99, 102, 241, 0.25) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+#btn-split.active-split svg {
+  color: var(--primary) !important;
+}
+
+
+/* IDE Çerçevesinin Altındaki Durum Çubuğu */
 .window-statusbar {
   background: #090a0f;
   border-top: 1px solid var(--border-color);
@@ -603,8 +724,512 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: rgba(255, 255, 255, 0.15);
 }
 
-/* Ace Custom Classes adjustments */
+/* Ace Özel Sınıf Düzenlemeleri */
 .ace_editor {
   font-family: var(--font-mono) !important;
   font-size: 14px;
+}
+
+/* Özel Footer Stilleri */
+.app-footer-custom {
+  margin-top: 24px;
+  padding: 16px 0;
+  text-align: center;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.app-footer-custom a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s, text-shadow 0.2s;
+}
+
+.app-footer-custom a:hover {
+  color: var(--secondary);
+  text-shadow: 0 0 8px rgba(168, 85, 247, 0.4);
+  text-decoration: underline;
+}
+
+/* Sekmeler Satırı Konteyneri (Ayrı Bir Satır Olarak Çakışmayı Önler) */
+.tabs-row-container {
+  background: #090a0f;
+  border-bottom: 1px solid var(--border-color);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  min-height: 38px;
+}
+
+/* Çoklu Sekmeli Dosya Yapısı Stilleri */
+.file-tabs {
+  margin-left: 0;
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  width: 100%;
+  max-width: 100%;
+  scrollbar-width: none; /* Firefox */
+  align-items: flex-end;
+}
+
+.file-tabs::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.tab {
+  height: 32px !important;
+  border-top: none !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 8px 8px 0 0 !important;
+  margin-right: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px !important;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.03) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.03) !important;
+  padding: 0 12px !important;
+  color: var(--text-muted) !important;
+}
+
+.tab.active {
+  border-bottom-color: var(--primary) !important;
+  background: #0f111a !important;
+  color: #ffffff !important;
+}
+
+.tab-separator {
+  display: flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.1);
+  margin: 0 8px 4px 8px;
+  user-select: none;
+  align-self: center;
+}
+
+.tab span[class^="tab-icon-"] {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #ffffff;
+  user-select: none;
+}
+
+.tab-icon-js { background: #eab308; color: #000000 !important; }
+.tab-icon-html { background: #ea580c; }
+.tab-icon-css { background: #2563eb; }
+.tab-icon-py { background: #0284c7; }
+.tab-icon-json { background: #ca8a04; }
+.tab-icon-sql { background: #0891b2; }
+.tab-icon-tro { background: #dc2626; }
+
+/* Kapatma Butonu Stilleri */
+.tab-close-btn {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.tab-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--error);
+}
+
+/* Hoş Geldiniz Ekranı Stilleri */
+.welcome-screen {
+  background: #0f111a;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 40px !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.welcome-logo {
+  margin-bottom: 20px;
+  color: var(--primary);
+  filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.4));
+  animation: pulseLogo 3s infinite ease-in-out;
+}
+
+@keyframes pulseLogo {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+.welcome-screen h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.welcome-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  max-width: 400px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.quick-files-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 480px;
+  width: 100%;
+}
+
+.quick-file-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  justify-content: flex-start;
+}
+
+.quick-file-btn:hover {
+  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--border-active);
+  transform: translateY(-1px);
+}
+
+.titlebar-project-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: 12px;
+}
+
+/* VS Code-style Activity Bar */
+.activity-bar {
+  width: 60px;
+  min-width: 60px;
+  background: rgba(13, 16, 27, 0.55);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.activity-btn {
+  width: 42px;
+  height: 42px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.activity-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activity-btn.active {
+  color: #fff;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+}
+
+/* Conditionally Visible Activity Buttons with Slide/Fade Transition */
+.activity-btn.conditional-btn {
+  opacity: 0;
+  transform: translateX(-20px) scale(0.8);
+  pointer-events: none;
+  width: 0px;
+  height: 0px;
+  margin-bottom: 0px;
+  overflow: hidden;
+  transition: opacity 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+              width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              height 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              margin-bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.activity-btn.conditional-btn.show-btn {
+  opacity: 0.7;
+  transform: translateX(0) scale(1);
+  pointer-events: auto;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 12px;
+}
+
+.activity-btn.conditional-btn.show-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.activity-btn.conditional-btn.show-btn.active {
+  opacity: 1;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+/* Staggered Delay for Entrance Effects */
+.activity-btn.conditional-btn[data-tab="snippets"].show-btn {
+  transition-delay: 0.05s;
+}
+.activity-btn.conditional-btn[data-tab="sandbox"].show-btn {
+  transition-delay: 0.1s;
+}
+.activity-btn.conditional-btn[data-tab="docs"].show-btn {
+  transition-delay: 0.15s;
+}
+
+/* Tab bölümleri */
+.sidebar-section {
+  display: none;
+}
+
+.sidebar-section.active {
+  display: block;
+}
+
+/* Şablon Kütüphanesi Tasarımı */
+.snippet-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.btn-snippet {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-snippet svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.btn-snippet span {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.btn-snippet:hover {
+  background: rgba(99, 102, 241, 0.06);
+  border-color: var(--border-active);
+  transform: translateX(2px);
+}
+
+.btn-snippet:hover svg {
+  color: var(--primary);
+}
+
+/* Dokümantasyon Arama ve Sonuç Kartları */
+.docs-results-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.docs-results-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.docs-results-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+.docs-results-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.doc-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+  transition: all 0.25s ease;
+}
+
+.doc-card:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.05);
+  transform: translateY(-1px);
+}
+
+.doc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.doc-card-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #a855f7;
+  font-family: var(--font-mono);
+}
+
+.doc-card-type {
+  font-size: 10px;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: #c084fc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.doc-card-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.doc-card-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: #090a0f;
+  border: 1px solid rgba(255,255,255,0.03);
+  padding: 8px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 6px 0 10px 0;
+  color: #94a3b8;
+  max-height: 120px;
+}
+
+.btn-doc-inject {
+  background: rgba(99, 102, 241, 0.1) !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  color: #c7d2fe !important;
+  font-weight: 600;
+  font-size: 11px !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: auto !important;
+}
+
+.btn-doc-inject:hover {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+}
+
+
+/* Accordion Styles */
+.doc-category-accordion {
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.doc-category-header {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background 0.2s;
+  user-select: none;
+}
+
+.doc-category-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.doc-category-header span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c9d1d9;
+}
+
+.doc-category-header .chevron {
+  font-size: 10px;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.doc-category-content {
+  padding: 10px;
+  border-top: 1px solid var(--border-color);
+  background: #090a0f;
+}
+
+/* Sandbox Tabs styling */
+.btn-sandbox-tab {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-muted) !important;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sandbox-tab:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #fff !important;
+}
+
+.btn-sandbox-tab.active {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  color: #fff !important;
 }
