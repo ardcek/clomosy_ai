@@ -365,6 +365,7 @@ document.getElementById("theme-select").addEventListener("change", function (e) 
 });
 
 // Sol Panel (Sidebar) Göster/Gizle Yönetimi
+const btnToggleSidebar = document.getElementById("btn-toggle-sidebar");
 const toggleSidebarCollapse = document.getElementById("toggle-sidebar-collapse");
 
 function toggleSidebar(forceState) {
@@ -377,16 +378,30 @@ function toggleSidebar(forceState) {
   if (!shouldHide) {
     workspace.classList.remove("hide-sidebar");
     if (toggleSidebarCollapse) toggleSidebarCollapse.checked = false;
+    if (btnToggleSidebar) {
+      btnToggleSidebar.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></svg>`;
+      btnToggleSidebar.classList.remove("active-collapsed");
+    }
     logToConsole("Sol kontrol paneli görünür yapıldı.", "system-msg");
   } else {
     workspace.classList.add("hide-sidebar");
     if (toggleSidebarCollapse) toggleSidebarCollapse.checked = true;
+    if (btnToggleSidebar) {
+      btnToggleSidebar.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></svg>`;
+      btnToggleSidebar.classList.add("active-collapsed");
+    }
     logToConsole("Sol kontrol paneli gizlendi (Editör alanı maksimum genişliğe ulaştı).", "system-msg");
   }
   
   // Ace editörün genişlik değişimini pürüzsüzce algılaması için resize tetikle
   setTimeout(() => editor.resize(), 100);
   setTimeout(() => editor.resize(), 300);
+}
+
+if (btnToggleSidebar) {
+  btnToggleSidebar.addEventListener("click", function () {
+    toggleSidebar();
+  });
 }
 
 if (toggleSidebarCollapse) {
@@ -979,6 +994,42 @@ function runLiveCode() {
 
   logToConsole("Kod derleme işlemi tetiklendi...", "system-msg");
 
+  // Canlı Önizleme İçin Açık/Koyu Tema Senkronizasyonu
+  let themeStyles = "";
+  if (isLightTheme) {
+    themeStyles = `
+      :root {
+        --iframe-bg: #f9fafb;
+        --iframe-color: #1f2937;
+        --iframe-panel-bg: rgba(0, 0, 0, 0.03);
+        --iframe-border: rgba(0, 0, 0, 0.08);
+        --iframe-muted: #6b7280;
+        --iframe-input-bg: #ffffff;
+        --iframe-input-border: #d1d5db;
+        --iframe-input-color: #1f2937;
+        --iframe-phone-border: #d1d5db;
+        --iframe-table-header: #f3f4f6;
+        --iframe-table-row-hover: rgba(99, 102, 241, 0.05);
+      }
+    `;
+  } else {
+    themeStyles = `
+      :root {
+        --iframe-bg: #090a0f;
+        --iframe-color: #ffffff;
+        --iframe-panel-bg: rgba(255, 255, 255, 0.05);
+        --iframe-border: rgba(255, 255, 255, 0.05);
+        --iframe-muted: #8b949e;
+        --iframe-input-bg: #1e293b;
+        --iframe-input-border: #334155;
+        --iframe-input-color: #ffffff;
+        --iframe-phone-border: #1e293b;
+        --iframe-table-header: #21262d;
+        --iframe-table-row-hover: rgba(99, 102, 241, 0.05);
+      }
+    `;
+  }
+
   if (mode === "html") {
     // HTML doğrudan iframe'e aktarılır, console.log'ları yakalayacak betik eklenir
     const customConsoleScript = `
@@ -1085,6 +1136,11 @@ function runLiveCode() {
       } else {
         const simpleColorMatch = code.match(/SetFormColor\s*\(\s*['"](#?[A-Fa-f0-9]{6})['"]\s*\)/i);
         if (simpleColorMatch) bgColor = simpleColorMatch[1];
+      }
+
+      // Eğer arayüz Açık Modda ise ve kullanıcı özel bir renk belirtmediyse varsayılan rengi beyaz yap
+      if (isLightTheme && bgColor === "#0f111a") {
+        bgColor = "#ffffff";
       }
 
       // ShowMessage yakalama
@@ -1390,9 +1446,10 @@ function runLiveCode() {
         <head>
           <meta charset="UTF-8">
           <style>
+            ${themeStyles}
             body {
-              background: #090a0f;
-              color: #fff;
+              background: var(--iframe-bg);
+              color: var(--iframe-color);
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
               display: flex;
               justify-content: center;
@@ -1403,7 +1460,7 @@ function runLiveCode() {
             .phone-emulator {
               width: 280px;
               height: 480px;
-              border: 12px solid #1e293b;
+              border: 12px solid var(--iframe-phone-border);
               border-radius: 40px;
               background: ${bgColor};
               box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
@@ -1449,7 +1506,7 @@ function runLiveCode() {
               box-sizing: border-box;
             }
             .cl-panel {
-              background: rgba(255, 255, 255, 0.05);
+              background: var(--iframe-panel-bg);
               border-radius: 16px;
               width: 90%;
               padding: 15px;
@@ -1458,8 +1515,8 @@ function runLiveCode() {
               flex-direction: column;
               justify-content: center;
               align-items: center;
-              box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-              border: 1px solid rgba(255,255,255,0.05);
+              box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+              border: 1px solid var(--iframe-border);
               box-sizing: border-box;
             }
             .cl-btn {
@@ -1486,10 +1543,10 @@ function runLiveCode() {
             .cl-input {
               width: 85%;
               padding: 8px 12px;
-              background: #1e293b;
-              border: 1px solid #334155;
+              background: var(--iframe-input-bg);
+              border: 1px solid var(--iframe-input-border);
               border-radius: 8px;
-              color: #fff;
+              color: var(--iframe-input-color);
               margin: 8px auto;
               font-size: 13px;
               box-sizing: border-box;
@@ -1498,10 +1555,10 @@ function runLiveCode() {
               width: 85%;
               height: 70px;
               padding: 8px 12px;
-              background: #1e293b;
-              border: 1px solid #334155;
+              background: var(--iframe-input-bg);
+              border: 1px solid var(--iframe-input-border);
               border-radius: 8px;
-              color: #fff;
+              color: var(--iframe-input-color);
               margin: 8px auto;
               font-size: 13px;
               resize: none;
@@ -1513,14 +1570,14 @@ function runLiveCode() {
               border-radius: 12px;
               object-fit: cover;
               margin: 8px auto;
-              border: 1px solid rgba(255,255,255,0.1);
+              border: 1px solid var(--iframe-border);
               box-sizing: border-box;
             }
             .cl-list {
               width: 90%;
-              background: rgba(0,0,0,0.2);
+              background: var(--iframe-panel-bg);
               border-radius: 12px;
-              border: 1px solid rgba(255,255,255,0.05);
+              border: 1px solid var(--iframe-border);
               padding: 5px;
               max-height: 140px;
               overflow-y: auto;
@@ -1529,7 +1586,7 @@ function runLiveCode() {
             }
             .cl-list-item {
               padding: 8px 12px;
-              border-bottom: 1px solid rgba(255,255,255,0.03);
+              border-bottom: 1px solid var(--iframe-border);
               cursor: pointer;
               transition: background 0.2s;
               text-align: left;
@@ -1540,11 +1597,11 @@ function runLiveCode() {
             .cl-list-item-title {
               font-weight: 600;
               font-size: 13px;
-              color: #fff;
+              color: var(--iframe-color);
             }
             .cl-list-item-sub {
               font-size: 11px;
-              color: #8b949e;
+              color: var(--iframe-muted);
               margin-top: 2px;
             }
             /* Clomosy Toast/Dialog modal */
@@ -1769,9 +1826,10 @@ function runLiveCode() {
         <html>
         <head>
           <style>
+            ${themeStyles}
             body {
-              background: #090a0f;
-              color: #cbd5e1;
+              background: var(--iframe-bg);
+              color: var(--iframe-color);
               font-family: 'JetBrains Mono', monospace;
               padding: 20px;
               margin: 0;
@@ -1779,8 +1837,8 @@ function runLiveCode() {
               line-height: 1.6;
             }
             .terminal-header {
-              color: #8b949e;
-              border-bottom: 1px solid #21262d;
+              color: var(--iframe-muted);
+              border-bottom: 1px solid var(--iframe-border);
               padding-bottom: 8px;
               margin-bottom: 15px;
               font-size: 11px;
@@ -1791,11 +1849,11 @@ function runLiveCode() {
               color: #58a6ff;
             }
             .output {
-              color: #fff;
-              background: rgba(255,255,255,0.02);
+              color: var(--iframe-color);
+              background: var(--iframe-panel-bg);
               padding: 12px;
               border-radius: 8px;
-              border: 1px solid rgba(255,255,255,0.05);
+              border: 1px solid var(--iframe-border);
               min-height: 80px;
             }
           </style>
@@ -2290,16 +2348,17 @@ function runLiveCode() {
         <html>
         <head>
           <style>
+            ${themeStyles}
             body {
-              background: #0f111a;
-              color: #e2e8f0;
+              background: var(--iframe-bg);
+              color: var(--iframe-color);
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
               padding: 20px;
               margin: 0;
             }
             .grid-header {
               font-size: 12px;
-              color: #94a3b8;
+              color: var(--iframe-muted);
               margin-bottom: 12px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
@@ -2309,10 +2368,10 @@ function runLiveCode() {
             table {
               width: 100%;
               border-collapse: collapse;
-              background: #161b22;
+              background: var(--iframe-panel-bg);
               border-radius: 8px;
               overflow: hidden;
-              border: 1px solid #30363d;
+              border: 1px solid var(--iframe-border);
             }
             th {
               background: #21262d;
@@ -2412,9 +2471,10 @@ function runLiveCode() {
         <html>
         <head>
           <style>
+            ${themeStyles}
             body {
-              background: #0f111a;
-              color: #cbd5e1;
+              background: var(--iframe-bg);
+              color: var(--iframe-color);
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
               padding: 20px;
               margin: 0;
@@ -2433,14 +2493,14 @@ function runLiveCode() {
               gap: 8px;
             }
             .config-card {
-              background: #161b22;
+              background: var(--iframe-panel-bg);
               border-radius: 12px;
               padding: 20px;
-              border: 1px solid #30363d;
+              border: 1px solid var(--iframe-border);
             }
             .config-row {
               display: flex;
-              border-bottom: 1px solid #21262d;
+              border-bottom: 1px solid var(--iframe-border);
               padding: 10px 0;
               font-size: 13px;
             }
@@ -2448,7 +2508,7 @@ function runLiveCode() {
               border-bottom: none;
             }
             .label {
-              color: #8b949e;
+              color: var(--iframe-muted);
               width: 140px;
               font-weight: 500;
             }
@@ -2514,6 +2574,7 @@ if (btnSandboxRest && btnSandboxDb) {
     btnSandboxDb.classList.remove("active");
     panelRest.style.display = "block";
     panelDb.style.display = "none";
+    document.getElementById("sandbox-json-path-container").style.display = "block";
     resultTitle.innerText = "API Yanıtı (JSON):";
     resultOutput.innerText = "// İstek sonuçları burada görüntülenecektir";
     clomosyCodeOutput.innerText = "// Clomosy Pascal karşılığı burada üretilecektir";
@@ -2524,89 +2585,318 @@ if (btnSandboxRest && btnSandboxDb) {
     btnSandboxRest.classList.remove("active");
     panelRest.style.display = "none";
     panelDb.style.display = "block";
+    document.getElementById("sandbox-json-path-container").style.display = "none";
     resultTitle.innerText = "Sorgu Sonucu (Veri Kümesi):";
     resultOutput.innerText = "// SQL sonuçları burada görüntülenecektir";
     clomosyCodeOutput.innerText = "// Clomosy Pascal karşılığı burada üretilecektir";
   });
 }
 
-// REST API Gönderme İşlemi
+// Örnek Seçici Tetikleyici
+const restUrlSelect = document.getElementById("sandbox-rest-url-select");
+if (restUrlSelect) {
+  restUrlSelect.addEventListener("change", function () {
+    const selectedUrl = this.value;
+    const urlInput = document.getElementById("sandbox-rest-url-input");
+    const methodSelect = document.getElementById("sandbox-rest-method");
+    const headersArea = document.getElementById("sandbox-rest-headers");
+    const bodyArea = document.getElementById("sandbox-rest-body");
+    const bodyContainer = document.getElementById("sandbox-rest-body-container");
+
+    if (urlInput) urlInput.value = selectedUrl;
+
+    if (selectedUrl.includes("gemini")) {
+      if (methodSelect) methodSelect.value = "POST";
+      if (bodyContainer) bodyContainer.style.display = "block";
+      if (headersArea) headersArea.value = '{\n  "Content-Type": "application/json"\n}';
+      if (bodyArea) bodyArea.value = '{\n  "contents": [\n    {\n      "parts": [\n        {\n          "text": "Merhaba Clomosy!"\n        }\n      ]\n    }\n  ]\n}';
+    } else {
+      if (methodSelect) methodSelect.value = "GET";
+      if (bodyContainer) bodyContainer.style.display = "none";
+      if (headersArea) headersArea.value = "";
+      if (bodyArea) bodyArea.value = "";
+    }
+  });
+}
+
+// Method Seçildiğinde Body Görünürlüğü Ayarla
+const restMethodSelect = document.getElementById("sandbox-rest-method");
+if (restMethodSelect) {
+  restMethodSelect.addEventListener("change", function () {
+    const val = this.value;
+    const bodyContainer = document.getElementById("sandbox-rest-body-container");
+    if (bodyContainer) {
+      if (val === "POST" || val === "PUT") {
+        bodyContainer.style.display = "block";
+      } else {
+        bodyContainer.style.display = "none";
+      }
+    }
+  });
+}
+
+// REST API Gönderme İşlemi (Gelişmiş Metot, Headers & Body Entegrasyonu)
 const btnSendRest = document.getElementById("btn-sandbox-send-rest");
 if (btnSendRest) {
   btnSendRest.addEventListener("click", function () {
-    const url = document.getElementById("sandbox-rest-url").value;
-    logToConsole(`REST API İsteği Gönderiliyor: ${url}`, "api-call");
-    resultOutput.innerText = "Yükleniyor...";
+    const method = document.getElementById("sandbox-rest-method").value;
+    const url = document.getElementById("sandbox-rest-url-input").value;
+    const headersVal = document.getElementById("sandbox-rest-headers").value;
+    const bodyVal = document.getElementById("sandbox-rest-body").value;
 
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        const strData = JSON.stringify(data, null, 2);
-        resultOutput.innerText = strData;
-        logToConsole(`REST API Yanıtı Başarıyla Alındı (${strData.length} bayt).`, "result-success");
+    logToConsole(`[REST API Sandbox] ${method} İsteği Gönderiliyor: ${url}`, "api-call");
+    resultOutput.innerText = "Bağlantı kuruluyor, yanıt bekleniyor...";
 
-        // Clomosy Kodu Üret
-        clomosyCodeOutput.innerText = `var\n  rest: TclRest;\n{\n  rest = TclRest.Create;\n  rest.BaseURL = '${url}';\n  rest.Method = rmGET;\n  rest.Accept = 'application/json';\n  rest.Execute;\n  ShowMessage(rest.Response);\n  rest.Free;\n}`;
+    const options = {
+      method: method,
+      headers: {
+        "Accept": "application/json"
+      }
+    };
+
+    // Headers parse
+    if (headersVal.trim()) {
+      try {
+        const parsedHeaders = JSON.parse(headersVal);
+        options.headers = { ...options.headers, ...parsedHeaders };
+      } catch (e) {
+        logToConsole(`[Header Hatası] Geçersiz JSON header formatı: ${e.message}`, "system-msg");
+      }
+    }
+
+    // Body ekleme
+    if ((method === "POST" || method === "PUT") && bodyVal.trim()) {
+      options.body = bodyVal;
+      if (!options.headers["Content-Type"]) {
+        options.headers["Content-Type"] = "application/json";
+      }
+    }
+
+    fetch(url, options)
+      .then(res => {
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          return res.json().then(data => ({ status: res.status, data }));
+        } else {
+          return res.text().then(text => ({ status: res.status, data: text }));
+        }
+      })
+      .then(({ status, data }) => {
+        let displayStr = "";
+        window.lastSandboxResponse = null;
+
+        if (typeof data === "object") {
+          window.lastSandboxResponse = data;
+          displayStr = JSON.stringify(data, null, 2);
+        } else {
+          displayStr = String(data);
+        }
+
+        resultOutput.innerText = displayStr;
+        logToConsole(`[REST API Sandbox] HTTP ${status} Yanıtı Başarıyla Alındı (${displayStr.length} karakter).`, "result-success");
+
+        // Clomosy Eşdeğer Kodu Üret (Asenkron ve Emülatör Uyumlu Mobil Proje Şablonu)
+        let bodyAssign = "";
+        if ((method === "POST" || method === "PUT") && bodyVal.trim()) {
+          const cleanBody = bodyVal.replace(/\r?\n/g, "").replace(/'/g, "''");
+          bodyAssign = `  Rest.Body = '${cleanBody}';\n`;
+        }
+
+        const clomosyCode = `// Clomosy Rest API Mobil Uygulama Şablonu
+var
+  MyForm: TclForm;
+  Rest: TclRest;
+  btnRequest: TClProButton;
+  memoResult: TclMemo;
+
+void RestCompleted;
+{
+  memoResult.Text = Rest.Response;
+  ShowMessage('İstek Başarıyla Tamamlandı!');
+}
+
+void btnRequestClick;
+{
+  Rest = TclRest.Create;
+  Rest.Accept = 'application/json';
+  Rest.ContentType = 'application/json';
+  Rest.Method = rm${method === "GET" ? "GET" : method === "POST" ? "POST" : method === "PUT" ? "PUT" : "DELETE"};
+  Rest.BaseURL = '${url}';
+${bodyAssign}  Rest.OnCompleted = 'RestCompleted';
+  Rest.ExecuteAsync;
+}
+
+{
+  MyForm = TclForm.Create(self);
+  
+  memoResult = MyForm.AddNewMemo(MyForm, 'memoResult', '');
+  memoResult.Align = alClient;
+  memoResult.TextSettings.Font.Size = 14;
+  
+  btnRequest = MyForm.AddNewProButton(MyForm, 'btnRequest', 'İSTEK GÖNDER');
+  btnRequest.Align = alBottom;
+  btnRequest.Height = 45;
+  MyForm.AddNewEvent(btnRequest, tbeOnClick, 'btnRequestClick');
+  
+  MyForm.Run;
+}`;
+        clomosyCodeOutput.innerText = clomosyCode;
+        
+        // JSON Path sonucunu tetikle (Eğer alan doluysa)
+        triggerJsonPathParser();
       })
       .catch(err => {
-        resultOutput.innerText = "Hata: " + err.message;
-        logToConsole(`REST API Hatası: ${err.message}`, "system-msg");
+        resultOutput.innerText = "İstek Başarısız: " + err.message;
+        logToConsole(`[REST API Sandbox Hata] İstek gönderilemedi veya CORS engeline takıldı: ${err.message}`, "system-msg");
         clomosyCodeOutput.innerText = "// Hata oluştuğu için kod üretilemedi";
       });
   });
 }
 
-// SQLite Mock Veritabanı
+// JSON Path Çözümleyici ve Parse Kod Üreticisi
+function triggerJsonPathParser() {
+  const pathVal = document.getElementById("sandbox-json-path-input").value.trim();
+  const pathResultEl = document.getElementById("sandbox-json-path-result");
+  if (!pathResultEl) return;
+
+  if (!pathVal) {
+    pathResultEl.innerHTML = `// JSON Path yazarak Clomosy.CLParseJSON ifadesini üretebilirsiniz`;
+    return;
+  }
+
+  if (!window.lastSandboxResponse) {
+    pathResultEl.innerHTML = `<span style="color: #ff6b6b;">// Hata: Henüz başarılı bir API yanıtı alınmadı</span>`;
+    return;
+  }
+
+  // Path'i parse et: candidates.0.content.parts.0.text ->['candidates', '0', 'content', 'parts', '0', 'text']
+  const tokens = pathVal.split(".");
+  let currentVal = window.lastSandboxResponse;
+  let isValid = true;
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (currentVal && typeof currentVal === "object" && token in currentVal) {
+      currentVal = currentVal[token];
+    } else {
+      isValid = false;
+      break;
+    }
+  }
+
+  if (isValid) {
+    let strVal = typeof currentVal === "object" ? JSON.stringify(currentVal) : String(currentVal);
+    if (strVal.length > 50) strVal = strVal.substring(0, 47) + "...";
+    pathResultEl.innerHTML = `Clomosy.CLParseJSON(Rest.Response, '${pathVal}');\n<span style="color: #8b949e;">// Dönen Değer: "${strVal}"</span>`;
+  } else {
+    pathResultEl.innerHTML = `<span style="color: #ff9f43;">// Geçersiz Düğüm Yolu (JSON Path bulunamadı)</span>`;
+  }
+}
+
+// JSON Path input event listener
+const jsonPathInput = document.getElementById("sandbox-json-path-input");
+if (jsonPathInput) {
+  jsonPathInput.addEventListener("input", triggerJsonPathParser);
+}
+
+// SQLite Sanal Veritabanı
 const mockSandboxDB = {
-  kullanicilar: [
-    { id: 1, isim: "Ahmet", yas: 28, sehir: "İstanbul" },
-    { id: 2, isim: "Mehmet", yas: 34, sehir: "Ankara" },
-    { id: 3, isim: "Ayşe", yas: 22, sehir: "İzmir" },
-    { id: 4, isim: "Fatma", yas: 41, sehir: "Bursa" }
+  users: [
+    { ID: 1, Isim: "Arda Çekiç", Rol: "Yönetici", Aktif: "Evet" },
+    { ID: 2, Isim: "Ahmet Yılmaz", Rol: "Geliştirici", Aktif: "Evet" },
+    { ID: 3, Isim: "Ayşe Kaya", Rol: "Tasarımcı", Aktif: "Hayır" },
+    { ID: 4, Isim: "Mehmet Demir", Rol: "Stajyer", Aktif: "Evet" }
   ],
-  urunler: [
-    { id: 1, ad: "iPhone 15", miktar: 45 },
-    { id: 2, ad: "MacBook Pro", miktar: 20 },
-    { id: 3, ad: "iPad Air", miktar: 35 }
+  projects: [
+    { ProjeAdi: "clomosy_ai", ToplamTroDosyasi: 12, ToplamKodSatiri: 1250 },
+    { ProjeAdi: "game_project", ToplamTroDosyasi: 5, ToplamKodSatiri: 480 },
+    { ProjeAdi: "category_helper", ToplamTroDosyasi: 3, ToplamKodSatiri: 240 }
   ]
 };
 
-// SQL Sorgusu Çalıştırma İşlemi
+// SQL Sorgusu Çalıştırma İşlemi (Görsel HTML Izgara Tablosu ve TclListView Kod Üretimi)
 const btnRunQuery = document.getElementById("btn-sandbox-run-query");
 if (btnRunQuery) {
   btnRunQuery.addEventListener("click", function () {
     const query = document.getElementById("sandbox-db-query").value;
     logToConsole(`SQLite Sorgusu Çalıştırılıyor: ${query}`, "api-call");
 
-    let table = "kullanicilar";
-    if (query.toLowerCase().includes("urunler")) {
-      table = "urunler";
+    let table = "users";
+    if (query.toLowerCase().includes("projects")) {
+      table = "projects";
     }
 
     let rows = mockSandboxDB[table];
-    if (query.toLowerCase().includes("yas > 25") && table === "kullanicilar") {
-      rows = rows.filter(row => row.yas > 25);
+
+    // Çok basit where taklidi
+    if (query.toLowerCase().includes("aktif = 'evet'") || query.toLowerCase().includes("aktif='evet'")) {
+      rows = rows.filter(row => row.Aktif === "Evet");
+    } else if (query.toLowerCase().includes("aktif = 'hayir'") || query.toLowerCase().includes("aktif='hayir'")) {
+      rows = rows.filter(row => row.Aktif === "Hayır");
     }
 
-    // Markdown / Düz metin tablosu olarak çıktı üretelim
-    let tableOutput = "";
-    if (table === "kullanicilar") {
-      tableOutput = "ID | İsim   | Yaş | Şehir\n---|--------|-----|---------\n";
-      rows.forEach(r => {
-        tableOutput += `${r.id}  | ${r.isim.padEnd(6)} | ${r.yas}  | ${r.sehir}\n`;
-      });
+    if (query.toLowerCase().includes("toplamtrodosyasi > 4")) {
+      rows = rows.filter(row => row.ToplamTroDosyasi > 4);
+    }
+
+    // Şık HTML Tablosu Üretelim
+    let tableHTML = "";
+    if (rows.length === 0) {
+      tableHTML = `<div style="color: #ff6b6b; font-size: 11px; padding: 10px;">Sorgu sonucunda veri bulunamadı.</div>`;
     } else {
-      tableOutput = "ID | Ürün Adı    | Stok Miktarı\n---|-------------|-------------\n";
-      rows.forEach(r => {
-        tableOutput += `${r.id}  | ${r.ad.padEnd(11)} | ${r.miktar}\n`;
-      });
+      const keys = Object.keys(rows[0]);
+      let headers = keys.map(k => `<th>${k}</th>`).join("");
+      let bodyRows = rows.map(row => {
+        let cells = keys.map(k => `<td>${row[k]}</td>`).join("");
+        return `<tr>${cells}</tr>`;
+      }).join("");
+
+      tableHTML = `
+        <table class="sandbox-sql-table">
+          <thead>
+            <tr>${headers}</tr>
+          </thead>
+          <tbody>
+            ${bodyRows}
+          </tbody>
+        </table>
+      `;
     }
 
-    resultOutput.innerText = tableOutput;
+    resultOutput.innerHTML = tableHTML;
     logToConsole(`SQLite Sorgusu Başarıyla Sonuçlandı (${rows.length} satır).`, "result-success");
 
-    // Clomosy Kodu Üret
-    clomosyCodeOutput.innerText = `{\n  Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'local.db', '');\n  Clomosy.DBSQLiteQuery.Sql.Text = '${query.replace(/'/g, "''")}';\n  Clomosy.DBSQLiteQuery.OpenOrExecute;\n}`;
+    // Clomosy Pascal Eşdeğer Kodu Üret (ListView Listelemeli Mobil Proje Şablonu)
+    const displayCol1 = table === "users" ? "Isim" : "ProjeAdi";
+    const displayCol2 = table === "users" ? "Rol" : "ToplamKodSatiri";
+
+    const clomosyCode = `// Clomosy SQLite Veri Listeleme Şablonu
+var
+  MyForm: TclForm;
+  listData: TclListView;
+
+{
+  MyForm = TclForm.Create(self);
+  
+  listData = MyForm.AddNewListView(MyForm, 'listData');
+  listData.Align = alClient;
+
+  Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'local.db', '');
+  Clomosy.DBSQLiteQuery.Sql.Text = '${query.replace(/'/g, "''").replace(/\n/g, " ")}';
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+  
+  while not Clomosy.DBSQLiteQuery.EOF do
+  begin
+    listData.AddItem(
+      Clomosy.DBSQLiteQuery.FieldByName('${displayCol1}').AsString, 
+      'Detay: ' + Clomosy.DBSQLiteQuery.FieldByName('${displayCol2}').AsString
+    );
+    Clomosy.DBSQLiteQuery.Next;
+  end;
+  
+  MyForm.Run;
+}`;
+    clomosyCodeOutput.innerText = clomosyCode;
   });
 }
 
@@ -2615,7 +2905,7 @@ const btnSandboxInject = document.getElementById("btn-sandbox-inject-code");
 if (btnSandboxInject) {
   btnSandboxInject.addEventListener("click", function () {
     const code = clomosyCodeOutput.innerText;
-    if (code.startsWith("//") || code.trim() === "") {
+    if (code.includes("burada üretilecektir") || code.trim() === "") {
       logToConsole("Enjekte edilecek geçerli bir sandbox kodu bulunamadı. Önce test edin!", "system-msg");
       return;
     }

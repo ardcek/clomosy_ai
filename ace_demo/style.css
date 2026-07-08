@@ -1422,7 +1422,12 @@ input[type="range"]::-webkit-slider-thumb:hover {
   box-shadow: var(--shadow-main);
 }
 
-[data-theme="light"] #sandbox-rest-url,
+[data-theme="light"] #sandbox-rest-url-select,
+[data-theme="light"] #sandbox-rest-url-input,
+[data-theme="light"] #sandbox-rest-method,
+[data-theme="light"] #sandbox-rest-headers,
+[data-theme="light"] #sandbox-rest-body,
+[data-theme="light"] #sandbox-json-path-input,
 [data-theme="light"] #sandbox-db-query {
   background: #ffffff !important;
   color: #1f2937 !important;
@@ -1497,3 +1502,67 @@ input[type="range"]::-webkit-slider-thumb:hover {
 #btn-toggle-theme:hover svg {
   transform: rotate(30deg);
 }
+
+/* Gelişmiş API Sandbox CSS Düzenlemeleri */
+#sandbox-rest-url-input,
+#sandbox-rest-headers,
+#sandbox-rest-body,
+#sandbox-json-path-input,
+#sandbox-rest-method,
+#sandbox-rest-url-select {
+  border: 1px solid var(--border-color);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#sandbox-rest-url-input:focus,
+#sandbox-rest-headers:focus,
+#sandbox-rest-body:focus,
+#sandbox-json-path-input:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Şık SQL Izgara Çıktısı Tablosu */
+.sandbox-sql-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sandbox-sql-table th {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sandbox-sql-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+}
+
+.sandbox-sql-table tr:last-child td {
+  border-bottom: none;
+}
+
+[data-theme="light"] .sandbox-sql-table {
+  background: #ffffff;
+}
+
+[data-theme="light"] .sandbox-sql-table th {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+[data-theme="light"] .sandbox-sql-table td {
+  color: #374151;
+}
+
