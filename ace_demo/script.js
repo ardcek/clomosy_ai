@@ -299,11 +299,110 @@ function logToConsole(text, type = "system-msg") {
 // Arayüz Kontrol Olay Dinleyicileri
 // ----------------------------------------------------
 
-// Tema Seçici
+// Arayüz Teması Yönetimi (Light/Dark Mode)
+let isLightTheme = localStorage.getItem("theme") === "light";
+
+function applyTheme(light) {
+  const themeSelect = document.getElementById("theme-select");
+  const themeCheckbox = document.getElementById("toggle-interface-theme");
+  
+  if (light) {
+    document.documentElement.setAttribute("data-theme", "light");
+    localStorage.setItem("theme", "light");
+    if (themeCheckbox) themeCheckbox.checked = true;
+    
+    // Editör temasını açık temaya geçir (Eğer zaten açık bir tema seçili değilse)
+    const currentTheme = (editor.getTheme() || "").split("/").pop();
+    if (currentTheme !== "github" && currentTheme !== "chrome") {
+      editor.setTheme("ace/theme/github");
+      if (themeSelect) themeSelect.value = "github";
+    }
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+    localStorage.setItem("theme", "dark");
+    if (themeCheckbox) themeCheckbox.checked = false;
+    
+    // Editör temasını koyu temaya geçir (Eğer zaten koyu bir tema seçili değilse)
+    const currentTheme = (editor.getTheme() || "").split("/").pop();
+    if (currentTheme === "github" || currentTheme === "chrome") {
+      editor.setTheme("ace/theme/dracula");
+      if (themeSelect) themeSelect.value = "dracula";
+    }
+  }
+}
+
+// Sayfa yüklendiğinde temayı uygula
+applyTheme(isLightTheme);
+
+// Arayüz Teması Switch Olayı
+const toggleInterfaceTheme = document.getElementById("toggle-interface-theme");
+if (toggleInterfaceTheme) {
+  toggleInterfaceTheme.addEventListener("change", function () {
+    isLightTheme = this.checked;
+    applyTheme(isLightTheme);
+    logToConsole(`Genel arayüz teması değiştirildi: ${isLightTheme ? 'Açık Tema (Light)' : 'Koyu Tema (Dark)'}`, "system-msg");
+  });
+}
+
+// Tema Seçici (Editör Teması Dropdown)
 document.getElementById("theme-select").addEventListener("change", function (e) {
   const theme = e.target.value;
   editor.setTheme("ace/theme/" + theme);
   logToConsole(`Tema güncellendi: ace/theme/${theme}`, "api-call");
+  
+  // Eğer kullanıcı açık tema seçtiyse genel arayüzü de açık yap
+  if (theme === "github" || theme === "chrome") {
+    if (!isLightTheme) {
+      isLightTheme = true;
+      applyTheme(true);
+    }
+  } else {
+    if (isLightTheme) {
+      isLightTheme = false;
+      applyTheme(false);
+    }
+  }
+});
+
+// Sol Panel (Sidebar) Göster/Gizle Yönetimi
+const toggleSidebarCollapse = document.getElementById("toggle-sidebar-collapse");
+
+function toggleSidebar(forceState) {
+  const workspace = document.querySelector(".workspace");
+  if (!workspace) return;
+  
+  const isCurrentlyHidden = workspace.classList.contains("hide-sidebar");
+  const shouldHide = forceState !== undefined ? forceState : !isCurrentlyHidden;
+  
+  if (!shouldHide) {
+    workspace.classList.remove("hide-sidebar");
+    if (toggleSidebarCollapse) toggleSidebarCollapse.checked = false;
+    logToConsole("Sol kontrol paneli görünür yapıldı.", "system-msg");
+  } else {
+    workspace.classList.add("hide-sidebar");
+    if (toggleSidebarCollapse) toggleSidebarCollapse.checked = true;
+    logToConsole("Sol kontrol paneli gizlendi (Editör alanı maksimum genişliğe ulaştı).", "system-msg");
+  }
+  
+  // Ace editörün genişlik değişimini pürüzsüzce algılaması için resize tetikle
+  setTimeout(() => editor.resize(), 100);
+  setTimeout(() => editor.resize(), 300);
+}
+
+if (toggleSidebarCollapse) {
+  toggleSidebarCollapse.addEventListener("change", function () {
+    toggleSidebar(this.checked);
+  });
+}
+
+// Ctrl+B Klavye Kısayolu: Sol Paneli Göster/Gizle
+editor.commands.addCommand({
+  name: 'toggleSidebarHotkey',
+  bindKey: { win: 'Ctrl-B', mac: 'Command-B' },
+  exec: function (editor) {
+    toggleSidebar();
+  },
+  readOnly: false
 });
 
 // Mod (Dil) Seçici
@@ -2653,6 +2752,15 @@ document.querySelectorAll(".activity-btn").forEach(btn => {
     const tabName = this.getAttribute("data-tab");
     const controlPanel = document.getElementById("main-control-panel");
     const isCurrentlyCollapsed = controlPanel.classList.contains("collapsed");
+    const workspace = document.querySelector(".workspace");
+    
+    // Eğer sol panel tamamen gizlenmiş durumdaysa, gizliliği kaldır
+    if (workspace && workspace.classList.contains("hide-sidebar")) {
+      workspace.classList.remove("hide-sidebar");
+      const toggleSidebarCollapse = document.getElementById("toggle-sidebar-collapse");
+      if (toggleSidebarCollapse) toggleSidebarCollapse.checked = false;
+      logToConsole("Sol kontrol paneli görünür yapıldı.", "system-msg");
+    }
 
     // Aktif buton stilini güncelle
     const wasActive = this.classList.contains("active");

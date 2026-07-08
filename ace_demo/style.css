@@ -14,6 +14,28 @@
   --console-bg: #090a0f;
   --font-sans: 'Outfit', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --welcome-btn-bg: rgba(255, 255, 255, 0.02);
+  --welcome-btn-hover: rgba(255, 255, 255, 0.08);
+}
+
+/* Light Theme Değişkenleri */
+[data-theme="light"] {
+  --bg-main: #f3f4f6;
+  --bg-panel: rgba(255, 255, 255, 0.75);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --border-active: rgba(99, 102, 241, 0.5);
+  --text-main: #1f2937;
+  --text-muted: #4b5563;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --secondary: #9333ea;
+  --accent: #0d9488;
+  --error: #dc2626;
+  --console-bg: #e5e7eb;
+  --shadow-main: 0 8px 32px 0 rgba(31, 38, 135, 0.06);
+  --welcome-btn-bg: rgba(0, 0, 0, 0.02);
+  --welcome-btn-hover: rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -21,6 +43,11 @@
   padding: 0;
   box-sizing: border-box;
 }
+
+body, .panel, .ide-window, .window-titlebar, .tabs-row-container, .window-statusbar, .btn, .quick-file-btn, .tab, .activity-bar, .activity-btn, .sidebar-section, .console-box, .console-header, .console-output, .code-execution-viewer, select, input, textarea {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
 
 body {
   background-color: var(--bg-main);
@@ -863,7 +890,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
   padding: 40px !important;
   height: 100% !important;
   box-sizing: border-box !important;
+  z-index: 10;
+  position: relative;
 }
+
+.tab-content:not(.active) {
+  display: none !important;
+}
+
 
 .welcome-logo {
   margin-bottom: 20px;
@@ -1232,4 +1266,234 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(99, 102, 241, 0.15) !important;
   border-color: rgba(99, 102, 241, 0.3) !important;
   color: #fff !important;
+}
+
+/* -------------------------------------------------------
+   Arayüz Light Mode (Açık Tema) Ezme ve Uyumlaştırma Kuralları
+   ------------------------------------------------------- */
+[data-theme="light"] body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+[data-theme="light"] .app-header h1 {
+  color: #1f2937;
+}
+
+[data-theme="light"] .panel-header h2 {
+  color: #1f2937;
+}
+
+[data-theme="light"] select {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+}
+
+[data-theme="light"] .welcome-screen {
+  background: #f9fafb;
+}
+
+[data-theme="light"] .welcome-screen h2 {
+  color: #111827;
+}
+
+[data-theme="light"] .quick-file-btn {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #374151;
+}
+
+[data-theme="light"] .quick-file-btn:hover {
+  background: #f3f4f6;
+  border-color: var(--primary);
+}
+
+[data-theme="light"] .activity-bar {
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: var(--shadow-main);
+}
+
+[data-theme="light"] .activity-btn:hover {
+  color: var(--primary);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .tab.active {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-bottom-color: var(--primary) !important;
+}
+
+[data-theme="light"] .ide-window {
+  background: #ffffff;
+  box-shadow: var(--shadow-main);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .window-titlebar {
+  background: #f3f4f6;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .titlebar-project-name {
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .tabs-row-container {
+  background: #f3f4f6;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .window-statusbar {
+  background: #f3f4f6;
+  border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .doc-category-content {
+  background: #f9fafb;
+}
+
+[data-theme="light"] .doc-category-header {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+[data-theme="light"] .doc-category-header span {
+  color: #1f2937;
+}
+
+[data-theme="light"] .doc-category-accordion {
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .doc-card-code {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .console-box {
+  background: #f3f4f6;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .console-header {
+  background: #e5e7eb;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .console-output {
+  background: #f9fafb;
+}
+
+[data-theme="light"] .glow-orb {
+  opacity: 0.25;
+}
+
+[data-theme="light"] .code-execution-viewer {
+  background: #f3f4f6;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .code-execution-viewer pre {
+  color: #1f2937;
+}
+
+[data-theme="light"] .editor-actions button {
+  background: #ffffff;
+  color: #374151;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .editor-actions button:hover {
+  background: #f3f4f6;
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="light"] .doc-card {
+  background: rgba(0, 0, 0, 0.01);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .doc-card:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .control-panel {
+  box-shadow: var(--shadow-main);
+}
+
+[data-theme="light"] #sandbox-rest-url,
+[data-theme="light"] #sandbox-db-query {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] #docs-search-input {
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .btn-sandbox-tab {
+  background: #ffffff !important;
+  color: #374151 !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+[data-theme="light"] .btn-sandbox-tab.active {
+  background: rgba(99, 102, 241, 0.1) !important;
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+/* -------------------------------------------------------
+   Sol Paneli Komple Gizleyen / Daraltan Sınıflar & Animasyonlar
+   ------------------------------------------------------- */
+.activity-bar, .control-panel {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.2s ease, 
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              margin 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-width 0.3s ease;
+}
+
+.workspace.hide-sidebar .activity-bar {
+  width: 0px !important;
+  min-width: 0px !important;
+  opacity: 0 !important;
+  margin-right: 0px !important;
+  border: none !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+.workspace.hide-sidebar .control-panel {
+  width: 0px !important;
+  min-width: 0px !important;
+  opacity: 0 !important;
+  margin-right: 0px !important;
+  border: none !important;
+  padding: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+}
+
+/* -------------------------------------------------------
+   Üst Çubuk için Sidebar Toggle ve Tema Buton Stilleri
+   ------------------------------------------------------- */
+#btn-toggle-sidebar.active-collapsed {
+  background: rgba(99, 102, 241, 0.15) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+#btn-toggle-theme {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+#btn-toggle-theme:hover svg {
+  transform: rotate(30deg);
 }
