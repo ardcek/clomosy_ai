@@ -2885,14 +2885,14 @@ var
   Clomosy.DBSQLiteQuery.Sql.Text = '${query.replace(/'/g, "''").replace(/\n/g, " ")}';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
-  while not Clomosy.DBSQLiteQuery.EOF do
-  begin
+  while (not Clomosy.DBSQLiteQuery.Eof)
+  {
     listData.AddItem(
       Clomosy.DBSQLiteQuery.FieldByName('${displayCol1}').AsString, 
       'Detay: ' + Clomosy.DBSQLiteQuery.FieldByName('${displayCol2}').AsString
     );
     Clomosy.DBSQLiteQuery.Next;
-  end;
+  }
   
   MyForm.Run;
 }`;
