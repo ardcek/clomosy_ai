@@ -985,6 +985,80 @@ function showWelcomeScreen() {
 bindTabCloseEvents();
 
 // ----------------------------------------------------
+// TRObject (Pascal) kodlarını JS koduna transpile eden derleyici katmanı
+// ----------------------------------------------------
+function transpilePascalToJS(code) {
+  let js = code;
+
+  // Satır sonlarını normalize et
+  js = js.replace(/\r\n/g, "\n");
+
+  // 1. Prosedür tanımlamaları:
+  // void Name(params); -> function Name(params)
+  // void Name; -> function Name()
+  js = js.replace(/void\s+(\w+)(?:\s*\(([^)]*)\))?\s*;/gi, (match, name, params) => {
+    return `function ${name}(${params || ""})`;
+  });
+
+  // 2. "var" deklarasyonlarını temizle ve let ifadelerine dönüştür
+  // var x, y: Type; -> let x, y;
+  js = js.replace(/var\s+([\w\s,]+)\s*:\s*\w+\s*;/gi, (match, vars) => {
+    return `let ${vars};`;
+  });
+  // Geri kalan bağımsız var anahtar kelimelerini kaldır
+  js = js.replace(/\bvar\b/gi, "");
+
+  // 3. Pascal operatörlerini JS operatörlerine dönüştür
+  js = js.replace(/<>/g, "!=");
+  js = js.replace(/\band\b/gi, "&&");
+  js = js.replace(/\bor\b/gi, "||");
+  js = js.replace(/\bnot\b/gi, "!");
+
+  // 4. Clomosy sabitlerini ve hizalama enum'larını temizle
+  js = js.replace(/\b(alClient|alTop|alBottom|alLeft|alRight|alCenter|alMostTop|alMostBottom)\b/gi, "'$1'");
+  js = js.replace(/\b(rmGET|rmPOST|rmPUT|rmDELETE)\b/gi, "'$1'");
+  js = js.replace(/\btbeOnClick\b/gi, "'tbeOnClick'");
+  js = js.replace(/\bTrue\b/gi, "true");
+  js = js.replace(/\bFalse\b/gi, "false");
+  js = js.replace(/\bNil\b/gi, "null");
+  js = js.replace(/\bSelf\b/gi, "null");
+
+  // 5. Tip dönüştürme fonksiyonları
+  js = js.replace(/\bIntToStr\s*\(([^)]+)\)/gi, "String($1)");
+  js = js.replace(/\bStrToInt\s*\(([^)]+)\)/gi, "parseInt($1)");
+  js = js.replace(/\bFloatToStr\s*\(([^)]+)\)/gi, "String($1)");
+  js = js.replace(/\bStrToFloat\s*\(([^)]+)\)/gi, "parseFloat($1)");
+
+  // 6. Sınıf ve Nesne oluşturma komutları
+  js = js.replace(/TclRest\.Create\b/gi, "TclRest.Create()");
+  js = js.replace(/TclSQLQuery\.Create\(Nil\)/gi, "TclSQLQuery.Create()");
+  js = js.replace(/TclSQLQuery\.Create\(self\)/gi, "TclSQLQuery.Create()");
+
+  // 7. Parametresiz çağrılan Pascal metotlarına parantez ekle
+  js = js.replace(/\.Next\s*;/gi, ".Next();");
+  js = js.replace(/\.First\s*;/gi, ".First();");
+  js = js.replace(/\.Close\s*;/gi, ".Close();");
+  js = js.replace(/\.Open\s*;/gi, ".Open();");
+  js = js.replace(/\.OpenOrExecute\s*;/gi, ".OpenOrExecute();");
+  js = js.replace(/\.Execute\s*;/gi, ".Execute();");
+  js = js.replace(/\.ExecuteAsync\s*;/gi, ".ExecuteAsync();");
+  js = js.replace(/\.Free\s*;/gi, ".Free();");
+  js = js.replace(/\.Clear\s*;/gi, ".Clear();");
+  js = js.replace(/\.Run\s*;/gi, ".Run();");
+
+  // 8. Veri okuma basitleştirmeleri
+  js = js.replace(/\.AsString\b/gi, "");
+
+  // 9. Pascal satır sonları (#13#10, #13, #10) ve döngüler (for to)
+  js = js.replace(/#13#10/gi, '"\\n"');
+  js = js.replace(/#13/gi, '"\\n"');
+  js = js.replace(/#10/gi, '"\\n"');
+  js = js.replace(/for\s*\(?\s*(\w+)\s*=\s*([^ \t\r\n\(\)]+)\s+to\s+([^)\s{]+)\)?/gi, 'for ($1 = $2; $1 <= $3; $1++)');
+
+  return js;
+}
+
+// ----------------------------------------------------
 // Kodu Derleme & Önizlemede Çalıştırma
 // ----------------------------------------------------
 function runLiveCode() {
@@ -1440,6 +1514,8 @@ function runLiveCode() {
         logToConsole("[Ses Motoru] Oyun efekti kaydedildi ve çalınıyor...", "api-call");
       }
 
+      const transpiledJS = transpilePascalToJS(code);
+
       compiledHTML = `
         <!DOCTYPE html>
         <html>
@@ -1533,6 +1609,8 @@ function runLiveCode() {
               transition: background 0.2s, transform 0.1s;
               margin: 8px auto;
               box-sizing: border-box;
+              display: block;
+              text-align: center;
             }
             .cl-btn:hover {
               background: #4f46e5;
@@ -1550,6 +1628,7 @@ function runLiveCode() {
               margin: 8px auto;
               font-size: 13px;
               box-sizing: border-box;
+              outline: none;
             }
             .cl-textarea {
               width: 85%;
@@ -1563,6 +1642,7 @@ function runLiveCode() {
               font-size: 13px;
               resize: none;
               box-sizing: border-box;
+              outline: none;
             }
             .cl-img {
               width: 120px;
@@ -1681,23 +1761,493 @@ function runLiveCode() {
           </div>
 
           <script>
-            function showClomosyDialog(btnName) {
+            function showClomosyDialog(msg) {
+              document.getElementById('dialog-body-text').innerText = msg;
               document.getElementById('dialog-box').style.display = 'flex';
-              window.parent.postMessage({ type: 'IFRAME_LOG', message: 'ShowMessage tetiklendi: ' + btnName }, '*');
+              window.parent.postMessage({ type: 'IFRAME_LOG', message: '[ShowMessage] ' + msg, logType: 'result-success' }, '*');
             }
             function closeClomosyDialog() {
               document.getElementById('dialog-box').style.display = 'none';
             }
             function selectListItem(title, sub) {
-              document.getElementById('dialog-body-text').innerText = 'Secilen Eleman: ' + title + ' (' + sub + ')';
+              document.getElementById('dialog-body-text').innerText = 'Seçilen Eleman: ' + title + ' (' + sub + ')';
               document.getElementById('dialog-box').style.display = 'flex';
-              window.parent.postMessage({ type: 'IFRAME_LOG', message: 'Liste elemani secildi: ' + title }, '*');
+              window.parent.postMessage({ type: 'IFRAME_LOG', message: '[Liste Seçimi] ' + title + ' / ' + sub, logType: 'api-call' }, '*');
+            }
+
+            // --- Clomosy JS Runtime Sınıfları ---
+            class TclControl {
+              constructor(name, type) {
+                this.name = name;
+                this.type = type;
+                this.domElement = document.createElement(
+                  type === 'button' ? 'button' :
+                  type === 'edit' ? 'input' :
+                  type === 'memo' ? 'textarea' :
+                  type === 'image' ? 'img' : 'div'
+                );
+                this.domElement.id = name;
+                this.domElement.className = "cl-" + (type === 'panel' || type === 'layout' ? 'panel' : type);
+                this.children = [];
+              }
+
+              set Align(val) {
+                const alignment = String(val).toLowerCase();
+                const el = this.domElement;
+                if (alignment.includes("top")) {
+                  el.style.alignSelf = "stretch";
+                  el.style.margin = "8px auto";
+                  el.style.width = "90%";
+                } else if (alignment.includes("bottom")) {
+                  el.style.alignSelf = "stretch";
+                  el.style.marginTop = "auto";
+                  el.style.marginBottom = "8px";
+                  el.style.width = "90%";
+                } else if (alignment.includes("client")) {
+                  el.style.flex = "1";
+                  el.style.alignSelf = "stretch";
+                  el.style.width = "90%";
+                  el.style.margin = "8px auto";
+                } else if (alignment.includes("left")) {
+                  el.style.marginRight = "auto";
+                  el.style.marginTop = "8px";
+                  el.style.marginBottom = "8px";
+                } else if (alignment.includes("right")) {
+                  el.style.marginLeft = "auto";
+                  el.style.marginTop = "8px";
+                  el.style.marginBottom = "8px";
+                }
+              }
+
+              set Width(val) { this.domElement.style.width = typeof val === 'number' ? val + 'px' : val; }
+              set Height(val) { this.domElement.style.height = typeof val === 'number' ? val + 'px' : val; }
+              set RoundHeight(val) { this.domElement.style.borderRadius = typeof val === 'number' ? val + 'px' : val; }
+              set RoundWidth(val) { this.domElement.style.borderRadius = typeof val === 'number' ? val + 'px' : val; }
+
+              get Text() {
+                if (this.type === "edit" || this.type === "memo") return this.domElement.value;
+                return this.domElement.innerText;
+              }
+              set Text(val) {
+                if (this.type === "edit" || this.type === "memo") this.domElement.value = val;
+                else this.domElement.innerText = val;
+              }
+              
+              get TextSettings() {
+                const el = this.domElement;
+                return {
+                  Font: {
+                    set Size(val) { el.style.fontSize = typeof val === 'number' ? val + 'px' : val; }
+                  }
+                };
+              }
+
+              get Margins() {
+                const el = this.domElement;
+                return {
+                  set Top(val) { el.style.marginTop = val + 'px'; },
+                  set Bottom(val) { el.style.marginBottom = val + 'px'; },
+                  set Left(val) { el.style.marginLeft = val + 'px'; },
+                  set Right(val) { el.style.marginRight = val + 'px'; }
+                };
+              }
+
+              Clear() {
+                if (this.type === "list") this.domElement.innerHTML = "";
+                else if (this.type === "edit" || this.type === "memo") this.domElement.value = "";
+                else this.domElement.innerText = "";
+              }
+
+              AddItem(title, subtitle) {
+                if (this.type === "list") {
+                  const item = document.createElement("div");
+                  item.className = "cl-list-item";
+                  item.innerHTML = `
+                    <div class="cl-list-item-title">${title}</div>
+                    <div class="cl-list-item-sub">${subtitle}</div>
+                  `;
+                  item.addEventListener("click", () => selectListItem(title, subtitle));
+                  this.domElement.appendChild(item);
+                }
+              }
+            }
+
+            class TclForm {
+              static Create(owner) { return new TclForm(); }
+              constructor() {
+                const screen = document.querySelector(".phone-screen");
+                // Dinamik form oluşturulduğunda statik fallback bileşenleri temizle
+                if (screen) {
+                  Array.from(screen.childNodes).forEach(node => {
+                    if (node.id !== "dialog-box") screen.removeChild(node);
+                  });
+                }
+                this.domElement = screen;
+              }
+
+              AddNewPanel(parent, name) {
+                const ctrl = new TclControl(name, "panel");
+                ctrl.domElement.style.backgroundColor = "rgba(255,255,255,0.05)";
+                ctrl.domElement.style.borderRadius = "12px";
+                ctrl.domElement.style.padding = "15px";
+                ctrl.domElement.style.display = "flex";
+                ctrl.domElement.style.flexDirection = "column";
+                ctrl.domElement.style.boxSizing = "border-box";
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+              AddNewProPanel(parent, name) { return this.AddNewPanel(parent, name); }
+              AddNewLayout(parent, name) {
+                const ctrl = new TclControl(name, "layout");
+                ctrl.domElement.style.display = "flex";
+                ctrl.domElement.style.flexDirection = "column";
+                ctrl.domElement.style.boxSizing = "border-box";
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+
+              AddNewButton(parent, name, text) {
+                const ctrl = new TclControl(name, "button");
+                ctrl.domElement.innerText = text;
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+              AddNewProButton(parent, name, text) { return this.AddNewButton(parent, name, text); }
+
+              AddNewLabel(parent, name, text) {
+                const ctrl = new TclControl(name, "label");
+                ctrl.domElement.innerText = text;
+                ctrl.domElement.style.margin = "8px 0";
+                ctrl.domElement.style.textAlign = "center";
+                ctrl.domElement.style.fontSize = "14px";
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+              AddNewProLabel(parent, name, text) { return this.AddNewLabel(parent, name, text); }
+
+              AddNewEdit(parent, name, placeholder) {
+                const ctrl = new TclControl(name, "edit");
+                ctrl.domElement.placeholder = placeholder;
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+
+              AddNewMemo(parent, name, text) {
+                const ctrl = new TclControl(name, "memo");
+                ctrl.domElement.value = text;
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+
+              AddNewImage(parent, name) {
+                const ctrl = new TclControl(name, "image");
+                ctrl.domElement.src = "https://clomosy.com/demos/bg.png";
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+
+              AddNewListView(parent, name) {
+                const ctrl = new TclControl(name, "list");
+                parent.domElement.insertBefore(ctrl.domElement, document.getElementById("dialog-box"));
+                return ctrl;
+              }
+
+              AddNewEvent(control, eventType, procedureName) {
+                control.domElement.addEventListener("click", () => {
+                  if (typeof window[procedureName] === "function") {
+                    window[procedureName]();
+                  } else {
+                    console.warn("Prosedür bulunamadı:", procedureName);
+                  }
+                });
+              }
+
+              Run() {
+                console.log("TRObject Form Çalıştırıldı");
+              }
+            }
+
+            class TclRest {
+              static Create() { return new TclRest(); }
+              constructor() {
+                this.Accept = "application/json";
+                this.ContentType = "application/json";
+                this.Method = "GET";
+                this.BaseURL = "";
+                this.Body = "";
+                this.Headers = {};
+                this.Response = "";
+                this.OnCompleted = "";
+              }
+
+              AddHeader(key, val) { this.Headers[key] = val; }
+
+              Execute() { this.ExecuteAsync(); }
+
+              ExecuteAsync() {
+                const self = this;
+                window.parent.postMessage({
+                  type: "IFRAME_LOG",
+                  message: "[REST API] " + self.Method + " İsteği Gönderiliyor: " + self.BaseURL,
+                  logType: "api-call"
+                }, "*");
+
+                const options = {
+                  method: self.Method,
+                  headers: {
+                    "Accept": self.Accept,
+                    "Content-Type": self.ContentType,
+                    ...self.Headers
+                  }
+                };
+
+                if ((self.Method === "POST" || self.Method === "PUT") && self.Body) {
+                  options.body = self.Body;
+                }
+
+                fetch(self.BaseURL, options)
+                  .then(res => res.text())
+                  .then(text => {
+                    self.Response = text;
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[REST API] HTTP Yanıtı Alındı (" + text.length + " karakter)",
+                      logType: "result-success"
+                    }, "*");
+
+                    if (self.OnCompleted && typeof window[self.OnCompleted] === "function") {
+                      window[self.OnCompleted]();
+                    }
+                  })
+                  .catch(err => {
+                    self.Response = "";
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[REST API Hata] İstek başarısız: " + err.message,
+                      logType: "system-msg"
+                    }, "*");
+                  });
+              }
+            }
+
+            class TclJSONQuery {
+              static Create(owner) {
+                const q = new TclJSONQuery();
+                q.dataList = [];
+                q.index = -1;
+                q.Eof = true;
+                return q;
+              }
+              
+              static CreateFromPayload(payload) {
+                const q = new TclJSONQuery();
+                try {
+                  const parsed = JSON.parse(payload);
+                  q.dataList = Array.isArray(parsed) ? parsed : [parsed];
+                } catch (e) {
+                  q.dataList = [];
+                }
+                q.index = -1;
+                q.Eof = q.dataList.length === 0;
+                return q;
+              }
+
+              Close() { this.dataList = []; }
+              
+              First() {
+                this.index = this.dataList.length > 0 ? 0 : -1;
+                this.Eof = this.dataList.length === 0;
+              }
+
+              Next() {
+                this.index++;
+                this.Eof = this.index >= this.dataList.length;
+              }
+
+              get RecordCount() { return this.dataList.length; }
+              get getJSONString() { return JSON.stringify(this.dataList); }
+
+              FieldByName(name) {
+                const self = this;
+                return {
+                  get AsString() {
+                    if (self.index >= 0 && self.index < self.dataList.length) {
+                      const row = self.dataList[self.index];
+                      if (row && typeof row === "object" && name in row) {
+                        return String(row[name]);
+                      }
+                    }
+                    return "";
+                  }
+                };
+              }
+            }
+
+            const Clomosy = {
+              AppFilesPath: "",
+              AppUserProfile: 1,
+              PlatformIsMobile: true,
+              
+              DBSQLiteQuery: {
+                Sql: { Text: "" },
+                Close() { this.Sql.Text = ""; },
+                Open() { this.OpenOrExecute(); },
+                OpenOrExecute() {
+                  if (!this.Sql.Text) return;
+                  try {
+                    const parentDB = window.parent.sandboxDB;
+                    if (!parentDB) {
+                      console.error("Database not initialized");
+                      return;
+                    }
+                    this.results = parentDB.exec(this.Sql.Text);
+                    this.index = -1;
+                    this.Eof = this.results.length === 0 || this.results[0].values.length === 0;
+                    
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[SQLite] Sorgu çalıştırıldı: " + this.Sql.Text,
+                      logType: "result-success"
+                    }, "*");
+                  } catch (err) {
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[SQLite Hata] " + err.message,
+                      logType: "system-msg"
+                    }, "*");
+                    this.Eof = true;
+                  }
+                },
+                Next() {
+                  if (this.results && this.results.length > 0) {
+                    this.index++;
+                    const values = this.results[0].values;
+                    this.Eof = this.index >= values.length - 1;
+                  } else {
+                    this.Eof = true;
+                  }
+                },
+                FieldByName(name) {
+                  const self = this;
+                  return {
+                    get AsString() {
+                      if (self.results && self.results.length > 0 && self.index >= 0) {
+                        const cols = self.results[0].columns;
+                        const values = self.results[0].values[self.index];
+                        const colIndex = cols.indexOf(name);
+                        if (colIndex !== -1) return String(values[colIndex]);
+                      }
+                      return "";
+                    }
+                  };
+                }
+              },
+
+              DBSQLiteConnect(dbName, pwd) {
+                window.parent.postMessage({
+                  type: "IFRAME_LOG",
+                  message: "[SQLite Connect] local.db bağlantısı kuruldu.",
+                  logType: "result-success"
+                }, "*");
+                return true;
+              },
+
+              DBSQLServerConnection: {},
+              DBSQLServerQuery: {
+                Sql: { Text: "" },
+                Close() { this.Sql.Text = ""; },
+                Open() { this.OpenOrExecute(); },
+                OpenOrExecute() {
+                  if (!this.Sql.Text) return;
+                  try {
+                    const parentDB = window.parent.sandboxDB;
+                    if (!parentDB) return;
+                    this.results = parentDB.exec(this.Sql.Text);
+                    this.index = -1;
+                    this.Eof = this.results.length === 0 || this.results[0].values.length === 0;
+
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[SQL Server] Sorgu çalıştırıldı: " + this.Sql.Text,
+                      logType: "result-success"
+                    }, "*");
+                  } catch (err) {
+                    window.parent.postMessage({
+                      type: "IFRAME_LOG",
+                      message: "[SQL Server Hata] " + err.message,
+                      logType: "system-msg"
+                    }, "*");
+                    this.Eof = true;
+                  }
+                },
+                Next() {
+                  if (this.results && this.results.length > 0) {
+                    this.index++;
+                    const values = this.results[0].values;
+                    this.Eof = this.index >= values.length - 1;
+                  } else {
+                    this.Eof = true;
+                  }
+                },
+                FieldByName(name) {
+                  const self = this;
+                  return {
+                    get AsString() {
+                      if (self.results && self.results.length > 0 && self.index >= 0) {
+                        const cols = self.results[0].columns;
+                        const values = self.results[0].values[self.index];
+                        const colIndex = cols.indexOf(name);
+                        if (colIndex !== -1) return String(values[colIndex]);
+                      }
+                      return "";
+                    }
+                  };
+                }
+              },
+
+              DBSQLServerConnect(provider, server, user, pass, dbName, port) {
+                window.parent.postMessage({
+                  type: "IFRAME_LOG",
+                  message: "[SQL Server Connect] Uzak sunucu bağlantısı simüle edildi: " + server,
+                  logType: "result-success"
+                }, "*");
+                return true;
+              },
+
+              CLParseJSON(jsonStr, path) {
+                try {
+                  const obj = JSON.parse(jsonStr);
+                  const tokens = path.split(".");
+                  let val = obj;
+                  for (const t of tokens) {
+                    if (val && typeof val === "object" && t in val) val = val[t];
+                    else return "";
+                  }
+                  return typeof val === "object" ? JSON.stringify(val) : String(val);
+                } catch (e) {
+                  return "";
+                }
+              },
+
+              ClDataSetFromJSON(payload) {
+                return TclJSONQuery.CreateFromPayload(payload);
+              }
+            };
+
+            function ShowMessage(msg) { showClomosyDialog(msg); }
+
+            // --- Transpile Edilmiş Kullanıcı Kodu ---
+            try {
+              ${transpiledJS}
+            } catch(e) {
+              console.error(e);
+              window.parent.postMessage({ type: 'IFRAME_ERROR', message: 'Çalışma Zamanı Hatası: ' + e.message }, '*');
             }
           </script>
         </body>
         </html>
       `;
-      logToConsole("[TRObject] Kod derlemesi ve arayüz çözümlemesi tamamlandı.", "system-msg");
+      logToConsole("[TRObject] Kod derlemesi ve arayüz çözümlemesi tamamlandı. Canlı çalışma ortamı aktif.", "system-msg");
     }
     else if (mode === "python") { // Python Terminal
       let outputLines = [];
@@ -2549,10 +3099,10 @@ document.getElementById("btn-run").addEventListener("click", function () {
 // Iframe içindeki console.log'ları dinleyip konsol penceresine basan mesaj dinleyicisi
 window.addEventListener("message", function (e) {
   if (e.data && e.data.type === 'IFRAME_LOG') {
-    logToConsole(`[Console.log] ${e.data.message}`, "result-success");
+    logToConsole(e.data.message, e.data.logType || "result-success");
   }
   if (e.data && e.data.type === 'IFRAME_ERROR') {
-    logToConsole(`[Hata] ${e.data.message}`, "system-msg");
+    logToConsole(e.data.message, "system-msg");
   }
 });
 
@@ -2702,12 +3252,20 @@ if (btnSendRest) {
           bodyAssign = `  Rest.Body = '${cleanBody}';\n`;
         }
 
+        let acceptHeader = "application/json";
+        let contentTypeHeader = "application/json";
         let headerCalls = "";
+
         if (headersVal.trim()) {
           try {
             const parsedHeaders = JSON.parse(headersVal);
             for (const [key, value] of Object.entries(parsedHeaders)) {
-              if (key.toLowerCase() !== "content-type" && key.toLowerCase() !== "accept") {
+              const lowerKey = key.toLowerCase();
+              if (lowerKey === "accept") {
+                acceptHeader = value;
+              } else if (lowerKey === "content-type") {
+                contentTypeHeader = value;
+              } else {
                 const escapedValue = String(value).replace(/'/g, "''");
                 headerCalls += `  Rest.AddHeader('${key}', '${escapedValue}');\n`;
               }
@@ -2733,8 +3291,8 @@ void RestCompleted;
 void btnRequestClick;
 {
   Rest = TclRest.Create;
-  Rest.Accept = 'application/json';
-  Rest.ContentType = 'application/json';
+  Rest.Accept = '${acceptHeader}';
+  Rest.ContentType = '${contentTypeHeader}';
   Rest.Method = rm${method === "GET" ? "GET" : method === "POST" ? "POST" : method === "PUT" ? "PUT" : "DELETE"};
   Rest.BaseURL = '${url}';
 ${headerCalls}${bodyAssign}  Rest.OnCompleted = 'RestCompleted';
@@ -2816,6 +3374,45 @@ if (jsonPathInput) {
 
 // SQLite Gerçek WebAssembly Veritabanı Kurulumu
 let sandboxDB = null;
+
+// Şema bilgilerini dinamik olarak çeken fonksiyon
+function updateSchemaInfoUI() {
+  const schemaInfoEl = document.querySelector(".sandbox-schema-info");
+  if (!schemaInfoEl || !sandboxDB) return;
+
+  try {
+    const tablesResult = sandboxDB.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';");
+    if (tablesResult.length === 0) {
+      schemaInfoEl.innerHTML = `
+        <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">Sanal Veritabanı Tabloları:</div>
+        <div style="color: var(--text-muted); font-style: italic; font-size: 10px;">Tablo bulunamadı.</div>
+      `;
+      return;
+    }
+
+    const tables = tablesResult[0].values.map(row => row[0]);
+    let html = `<div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">Sanal Veritabanı Tabloları:</div>`;
+
+    tables.forEach(tableName => {
+      try {
+        const infoResult = sandboxDB.exec(`PRAGMA table_info(${tableName});`);
+        if (infoResult.length > 0) {
+          const cols = infoResult[0].values.map(row => row[1]); // kolon adı 1. indekste
+          html += `<div style="font-family: monospace; font-size: 10px; margin-top: 4px; word-break: break-all;">• <strong>${tableName}</strong> (${cols.join(", ")})</div>`;
+        } else {
+          html += `<div style="font-family: monospace; font-size: 10px; margin-top: 4px;">• <strong>${tableName}</strong></div>`;
+        }
+      } catch (err) {
+        html += `<div style="font-family: monospace; font-size: 10px; margin-top: 4px;">• <strong>${tableName}</strong></div>`;
+      }
+    });
+
+    schemaInfoEl.innerHTML = html;
+  } catch (e) {
+    console.error("Şema güncelleme hatası:", e);
+  }
+}
+
 if (typeof initSqlJs !== 'undefined') {
   initSqlJs({
     locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
@@ -2848,6 +3445,7 @@ if (typeof initSqlJs !== 'undefined') {
     sandboxDB.run("INSERT INTO projects VALUES ('category_helper', 3, 240);");
 
     logToConsole("[SQLite Engine] WebAssembly SQLite veritabanı başarıyla başlatıldı.", "result-success");
+    updateSchemaInfoUI();
   }).catch(err => {
     logToConsole("[SQLite Engine Hata] WASM yüklenemedi: " + err.message, "system-msg");
   });
@@ -2855,12 +3453,32 @@ if (typeof initSqlJs !== 'undefined') {
   logToConsole("[SQLite Engine Uyarısı] SQL.js kütüphanesi bulunamadı.", "system-msg");
 }
 
+// Veritabanı türü seçimi değiştiğinde
+const dbTypeSelect = document.getElementById("sandbox-db-type");
+if (dbTypeSelect) {
+  dbTypeSelect.addEventListener("change", function () {
+    const val = this.value;
+    const label = document.getElementById("sandbox-db-query-label");
+    const queryArea = document.getElementById("sandbox-db-query");
+    if (label) {
+      label.innerText = val === "sqlite" ? "SQLite Sorgusu (SQL)" : "SQL Server Sorgusu (MSSQL)";
+    }
+    if (queryArea) {
+      if (val === "sqlite") {
+        queryArea.value = "SELECT * FROM users WHERE Aktif = 'Evet';";
+      } else {
+        queryArea.value = "SELECT plate_code, city_name FROM Cities;";
+      }
+    }
+  });
+}
+
 // SQL Sorgusu Çalıştırma İşlemi (SQL.js WebAssembly ve TclListView Kod Üretimi)
 const btnRunQuery = document.getElementById("btn-sandbox-run-query");
 if (btnRunQuery) {
   btnRunQuery.addEventListener("click", function () {
     const query = document.getElementById("sandbox-db-query").value;
-    logToConsole(`SQLite Sorgusu Çalıştırılıyor: ${query}`, "api-call");
+    logToConsole(`Sorgu Çalıştırılıyor: ${query}`, "api-call");
 
     if (!sandboxDB) {
       resultOutput.innerHTML = `<div style="color: #ff9f43; font-size: 11px; padding: 10px;">Veritabanı henüz başlatılmadı veya yüklenemedi.</div>`;
@@ -2872,9 +3490,9 @@ if (btnRunQuery) {
       
       let tableHTML = "";
       if (results.length === 0) {
-        tableHTML = `<div style="color: #8bc34a; font-size: 11px; padding: 10px;">Sorgu başarıyla yürütüldü (Dönen satır yok).</div>`;
+        tableHTML = `<div style="color: #8bc34a; font-size: 11px; padding: 10px;">Sorgu başarıyla yürütüldü (Dönen veri kümesi yok).</div>`;
         resultOutput.innerHTML = tableHTML;
-        logToConsole(`SQLite Sorgusu Başarıyla Yürütüldü.`, "result-success");
+        logToConsole(`Sorgu Başarıyla Yürütüldü.`, "result-success");
       } else {
         const columns = results[0].columns;
         const values = results[0].values;
@@ -2896,18 +3514,33 @@ if (btnRunQuery) {
           </table>
         `;
         resultOutput.innerHTML = tableHTML;
-        logToConsole(`SQLite Sorgusu Başarıyla Sonuçlandı (${values.length} satır).`, "result-success");
+        logToConsole(`Sorgu Başarıyla Sonuçlandı (${values.length} satır).`, "result-success");
       }
 
-      // Clomosy Pascal Eşdeğer Kodu Üret (ListView Listelemeli Mobil Proje Şablonu)
-      let table = "users";
-      if (query.toLowerCase().includes("projects")) {
-        table = "projects";
+      // Tablo şemasını ve dinamik listeleme kolonlarını otomatik analiz et
+      const isSelect = query.trim().toUpperCase().startsWith("SELECT");
+      const dbType = document.getElementById("sandbox-db-type") ? document.getElementById("sandbox-db-type").value : "sqlite";
+      
+      let displayCol1 = "Isim";
+      let displayCol2 = "Rol";
+      
+      if (results.length > 0 && results[0].columns.length > 0) {
+        displayCol1 = results[0].columns[0];
+        displayCol2 = results[0].columns[1] || results[0].columns[0];
+      } else {
+        // Sonuç yoksa sorgu metninden eşleştir
+        if (query.toLowerCase().includes("projects")) {
+          displayCol1 = "ProjeAdi";
+          displayCol2 = "ToplamKodSatiri";
+        }
       }
-      const displayCol1 = table === "users" ? "Isim" : "ProjeAdi";
-      const displayCol2 = table === "users" ? "Rol" : "ToplamKodSatiri";
 
-      const clomosyCode = `// Clomosy SQLite Veri Listeleme Şablonu
+      let clomosyCode = "";
+      const escapedQuery = query.replace(/'/g, "''").replace(/\r?\n/g, " ");
+
+      if (dbType === "sqlite") {
+        if (isSelect) {
+          clomosyCode = `// Clomosy SQLite Veri Listeleme Şablonu
 var
   MyForm: TclForm;
   listData: TclListView;
@@ -2920,7 +3553,7 @@ var
 
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'local.db', '');
   Clomosy.DBSQLiteQuery.Close; // Önceki sorguyu kapat
-  Clomosy.DBSQLiteQuery.Sql.Text = '${query.replace(/'/g, "''").replace(/\n/g, " ")}';
+  Clomosy.DBSQLiteQuery.Sql.Text = '${escapedQuery}';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   while (not Clomosy.DBSQLiteQuery.Eof)
@@ -2934,11 +3567,68 @@ var
   
   MyForm.Run;
 }`;
+        } else {
+          clomosyCode = `// Clomosy SQLite Sorgu Çalıştırma Şablonu
+{
+  Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'local.db', '');
+  Clomosy.DBSQLiteQuery.Close; // Önceki sorguyu kapat
+  Clomosy.DBSQLiteQuery.Sql.Text = '${escapedQuery}';
+  Clomosy.DBSQLiteQuery.OpenOrExecute;
+  ShowMessage('İşlem Başarıyla Gerçekleştirildi!');
+}`;
+        }
+      } else {
+        // mssql
+        if (isSelect) {
+          clomosyCode = `// Clomosy SQL Server Veri Listeleme Şablonu
+var
+  MyForm: TclForm;
+  listData: TclListView;
+
+{
+  MyForm = TclForm.Create(self);
+  
+  listData = MyForm.AddNewListView(MyForm, 'listData');
+  listData.Align = alClient;
+
+  // SQL Server Bağlantısı (Bilgileri kendi sunucunuza göre güncelleyin)
+  Clomosy.DBSQLServerConnect('SQL Server', 'ServerHost', 'User', 'Pass', 'DbName', 1433);
+  Clomosy.DBSQLServerQuery.Close; // Önceki sorguyu kapat
+  Clomosy.DBSQLServerQuery.Sql.Text = '${escapedQuery}';
+  Clomosy.DBSQLServerQuery.OpenOrExecute;
+  
+  while (not Clomosy.DBSQLServerQuery.Eof)
+  {
+    listData.AddItem(
+      Clomosy.DBSQLServerQuery.FieldByName('${displayCol1}').AsString, 
+      'Detay: ' + Clomosy.DBSQLServerQuery.FieldByName('${displayCol2}').AsString
+    );
+    Clomosy.DBSQLServerQuery.Next;
+  }
+  
+  MyForm.Run;
+}`;
+        } else {
+          clomosyCode = `// Clomosy SQL Server Sorgu Çalıştırma Şablonu
+{
+  // SQL Server Bağlantısı (Bilgileri kendi sunucunuza göre güncelleyin)
+  Clomosy.DBSQLServerConnect('SQL Server', 'ServerHost', 'User', 'Pass', 'DbName', 1433);
+  Clomosy.DBSQLServerQuery.Close; // Önceki sorguyu kapat
+  Clomosy.DBSQLServerQuery.Sql.Text = '${escapedQuery}';
+  Clomosy.DBSQLServerQuery.OpenOrExecute;
+  ShowMessage('Sorgu SQL Server üzerinde başarıyla yürütüldü!');
+}`;
+        }
+      }
+
       clomosyCodeOutput.innerText = clomosyCode;
+      
+      // Tablo şemalarını dinamik güncelle (anlık yansıma için!)
+      updateSchemaInfoUI();
 
     } catch (err) {
       resultOutput.innerHTML = `<div style="color: #ff6b6b; font-size: 11px; padding: 10px;">SQL Hatası: ${err.message}</div>`;
-      logToConsole(`[SQLite Hata] Sorgu başarısız: ${err.message}`, "system-msg");
+      logToConsole(`[Veritabanı Hata] Sorgu başarısız: ${err.message}`, "system-msg");
       clomosyCodeOutput.innerText = "// SQL hatası nedeniyle kod üretilemedi";
     }
   });

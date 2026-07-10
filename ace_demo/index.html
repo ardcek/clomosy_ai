@@ -432,8 +432,18 @@
                 <div style="font-family: monospace;">• projects (ProjeAdi, ToplamTroDosyasi, ToplamKodSatiri)</div>
               </div>
 
+              <div style="margin-bottom: 8px;">
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hedef Veritabanı Türü</label>
+                <div class="select-wrapper">
+                  <select id="sandbox-db-type" style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
+                    <option value="sqlite" selected>SQLite (Yerel Veritabanı)</option>
+                    <option value="mssql">SQL Server (Uzak/Bulut Veritabanı)</option>
+                  </select>
+                </div>
+              </div>
+
               <div style="margin-bottom: 10px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">SQLite Sorgusu (SQL)</label>
+                <label id="sandbox-db-query-label" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">SQLite Sorgusu (SQL)</label>
                 <textarea id="sandbox-db-query" rows="2" style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 12px; resize: none; margin-bottom: 8px; outline: none; box-sizing: border-box;">SELECT * FROM users WHERE Aktif = 'Evet';</textarea>
               </div>
               <button class="btn" id="btn-sandbox-run-query" style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">SQL Sorgusunu Yürüt</button>
