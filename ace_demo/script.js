@@ -2702,6 +2702,21 @@ if (btnSendRest) {
           bodyAssign = `  Rest.Body = '${cleanBody}';\n`;
         }
 
+        let headerCalls = "";
+        if (headersVal.trim()) {
+          try {
+            const parsedHeaders = JSON.parse(headersVal);
+            for (const [key, value] of Object.entries(parsedHeaders)) {
+              if (key.toLowerCase() !== "content-type" && key.toLowerCase() !== "accept") {
+                const escapedValue = String(value).replace(/'/g, "''");
+                headerCalls += `  Rest.AddHeader('${key}', '${escapedValue}');\n`;
+              }
+            }
+          } catch (e) {
+            // Ignored if invalid JSON
+          }
+        }
+
         const clomosyCode = `// Clomosy Rest API Mobil Uygulama Şablonu
 var
   MyForm: TclForm;
@@ -2722,7 +2737,7 @@ void btnRequestClick;
   Rest.ContentType = 'application/json';
   Rest.Method = rm${method === "GET" ? "GET" : method === "POST" ? "POST" : method === "PUT" ? "PUT" : "DELETE"};
   Rest.BaseURL = '${url}';
-${bodyAssign}  Rest.OnCompleted = 'RestCompleted';
+${headerCalls}${bodyAssign}  Rest.OnCompleted = 'RestCompleted';
   Rest.ExecuteAsync;
 }
 
@@ -2799,78 +2814,100 @@ if (jsonPathInput) {
   jsonPathInput.addEventListener("input", triggerJsonPathParser);
 }
 
-// SQLite Sanal Veritabanı
-const mockSandboxDB = {
-  users: [
-    { ID: 1, Isim: "Arda Çekiç", Rol: "Yönetici", Aktif: "Evet" },
-    { ID: 2, Isim: "Ahmet Yılmaz", Rol: "Geliştirici", Aktif: "Evet" },
-    { ID: 3, Isim: "Ayşe Kaya", Rol: "Tasarımcı", Aktif: "Hayır" },
-    { ID: 4, Isim: "Mehmet Demir", Rol: "Stajyer", Aktif: "Evet" }
-  ],
-  projects: [
-    { ProjeAdi: "clomosy_ai", ToplamTroDosyasi: 12, ToplamKodSatiri: 1250 },
-    { ProjeAdi: "game_project", ToplamTroDosyasi: 5, ToplamKodSatiri: 480 },
-    { ProjeAdi: "category_helper", ToplamTroDosyasi: 3, ToplamKodSatiri: 240 }
-  ]
-};
+// SQLite Gerçek WebAssembly Veritabanı Kurulumu
+let sandboxDB = null;
+if (typeof initSqlJs !== 'undefined') {
+  initSqlJs({
+    locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
+  }).then(SQL => {
+    sandboxDB = new SQL.Database();
+    
+    // Seed default tables
+    sandboxDB.run(`
+      CREATE TABLE users (
+        ID INTEGER PRIMARY KEY,
+        Isim TEXT,
+        Rol TEXT,
+        Aktif TEXT
+      );
+    `);
+    sandboxDB.run("INSERT INTO users VALUES (1, 'Arda Çekiç', 'Yönetici', 'Evet');");
+    sandboxDB.run("INSERT INTO users VALUES (2, 'Ahmet Yılmaz', 'Geliştirici', 'Evet');");
+    sandboxDB.run("INSERT INTO users VALUES (3, 'Ayşe Kaya', 'Tasarımcı', 'Hayır');");
+    sandboxDB.run("INSERT INTO users VALUES (4, 'Mehmet Demir', 'Stajyer', 'Evet');");
 
-// SQL Sorgusu Çalıştırma İşlemi (Görsel HTML Izgara Tablosu ve TclListView Kod Üretimi)
+    sandboxDB.run(`
+      CREATE TABLE projects (
+        ProjeAdi TEXT,
+        ToplamTroDosyasi INTEGER,
+        ToplamKodSatiri INTEGER
+      );
+    `);
+    sandboxDB.run("INSERT INTO projects VALUES ('clomosy_ai', 12, 1250);");
+    sandboxDB.run("INSERT INTO projects VALUES ('game_project', 5, 480);");
+    sandboxDB.run("INSERT INTO projects VALUES ('category_helper', 3, 240);");
+
+    logToConsole("[SQLite Engine] WebAssembly SQLite veritabanı başarıyla başlatıldı.", "result-success");
+  }).catch(err => {
+    logToConsole("[SQLite Engine Hata] WASM yüklenemedi: " + err.message, "system-msg");
+  });
+} else {
+  logToConsole("[SQLite Engine Uyarısı] SQL.js kütüphanesi bulunamadı.", "system-msg");
+}
+
+// SQL Sorgusu Çalıştırma İşlemi (SQL.js WebAssembly ve TclListView Kod Üretimi)
 const btnRunQuery = document.getElementById("btn-sandbox-run-query");
 if (btnRunQuery) {
   btnRunQuery.addEventListener("click", function () {
     const query = document.getElementById("sandbox-db-query").value;
     logToConsole(`SQLite Sorgusu Çalıştırılıyor: ${query}`, "api-call");
 
-    let table = "users";
-    if (query.toLowerCase().includes("projects")) {
-      table = "projects";
+    if (!sandboxDB) {
+      resultOutput.innerHTML = `<div style="color: #ff9f43; font-size: 11px; padding: 10px;">Veritabanı henüz başlatılmadı veya yüklenemedi.</div>`;
+      return;
     }
 
-    let rows = mockSandboxDB[table];
+    try {
+      const results = sandboxDB.exec(query);
+      
+      let tableHTML = "";
+      if (results.length === 0) {
+        tableHTML = `<div style="color: #8bc34a; font-size: 11px; padding: 10px;">Sorgu başarıyla yürütüldü (Dönen satır yok).</div>`;
+        resultOutput.innerHTML = tableHTML;
+        logToConsole(`SQLite Sorgusu Başarıyla Yürütüldü.`, "result-success");
+      } else {
+        const columns = results[0].columns;
+        const values = results[0].values;
+        
+        let headers = columns.map(col => `<th>${col}</th>`).join("");
+        let bodyRows = values.map(row => {
+          let cells = row.map(val => `<td>${val === null ? "NULL" : val}</td>`).join("");
+          return `<tr>${cells}</tr>`;
+        }).join("");
 
-    // Çok basit where taklidi
-    if (query.toLowerCase().includes("aktif = 'evet'") || query.toLowerCase().includes("aktif='evet'")) {
-      rows = rows.filter(row => row.Aktif === "Evet");
-    } else if (query.toLowerCase().includes("aktif = 'hayir'") || query.toLowerCase().includes("aktif='hayir'")) {
-      rows = rows.filter(row => row.Aktif === "Hayır");
-    }
+        tableHTML = `
+          <table class="sandbox-sql-table">
+            <thead>
+              <tr>${headers}</tr>
+            </thead>
+            <tbody>
+              ${bodyRows}
+            </tbody>
+          </table>
+        `;
+        resultOutput.innerHTML = tableHTML;
+        logToConsole(`SQLite Sorgusu Başarıyla Sonuçlandı (${values.length} satır).`, "result-success");
+      }
 
-    if (query.toLowerCase().includes("toplamtrodosyasi > 4")) {
-      rows = rows.filter(row => row.ToplamTroDosyasi > 4);
-    }
+      // Clomosy Pascal Eşdeğer Kodu Üret (ListView Listelemeli Mobil Proje Şablonu)
+      let table = "users";
+      if (query.toLowerCase().includes("projects")) {
+        table = "projects";
+      }
+      const displayCol1 = table === "users" ? "Isim" : "ProjeAdi";
+      const displayCol2 = table === "users" ? "Rol" : "ToplamKodSatiri";
 
-    // Şık HTML Tablosu Üretelim
-    let tableHTML = "";
-    if (rows.length === 0) {
-      tableHTML = `<div style="color: #ff6b6b; font-size: 11px; padding: 10px;">Sorgu sonucunda veri bulunamadı.</div>`;
-    } else {
-      const keys = Object.keys(rows[0]);
-      let headers = keys.map(k => `<th>${k}</th>`).join("");
-      let bodyRows = rows.map(row => {
-        let cells = keys.map(k => `<td>${row[k]}</td>`).join("");
-        return `<tr>${cells}</tr>`;
-      }).join("");
-
-      tableHTML = `
-        <table class="sandbox-sql-table">
-          <thead>
-            <tr>${headers}</tr>
-          </thead>
-          <tbody>
-            ${bodyRows}
-          </tbody>
-        </table>
-      `;
-    }
-
-    resultOutput.innerHTML = tableHTML;
-    logToConsole(`SQLite Sorgusu Başarıyla Sonuçlandı (${rows.length} satır).`, "result-success");
-
-    // Clomosy Pascal Eşdeğer Kodu Üret (ListView Listelemeli Mobil Proje Şablonu)
-    const displayCol1 = table === "users" ? "Isim" : "ProjeAdi";
-    const displayCol2 = table === "users" ? "Rol" : "ToplamKodSatiri";
-
-    const clomosyCode = `// Clomosy SQLite Veri Listeleme Şablonu
+      const clomosyCode = `// Clomosy SQLite Veri Listeleme Şablonu
 var
   MyForm: TclForm;
   listData: TclListView;
@@ -2882,6 +2919,7 @@ var
   listData.Align = alClient;
 
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'local.db', '');
+  Clomosy.DBSQLiteQuery.Close; // Önceki sorguyu kapat
   Clomosy.DBSQLiteQuery.Sql.Text = '${query.replace(/'/g, "''").replace(/\n/g, " ")}';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -2896,7 +2934,13 @@ var
   
   MyForm.Run;
 }`;
-    clomosyCodeOutput.innerText = clomosyCode;
+      clomosyCodeOutput.innerText = clomosyCode;
+
+    } catch (err) {
+      resultOutput.innerHTML = `<div style="color: #ff6b6b; font-size: 11px; padding: 10px;">SQL Hatası: ${err.message}</div>`;
+      logToConsole(`[SQLite Hata] Sorgu başarısız: ${err.message}`, "system-msg");
+      clomosyCodeOutput.innerText = "// SQL hatası nedeniyle kod üretilemedi";
+    }
   });
 }
 
@@ -2974,6 +3018,8 @@ const clomosyCompleter = {
       { name: "TclVertScrollBox", value: "TclVertScrollBox", score: 1000, meta: "Dikey Kaydırma Kutusu" },
       { name: "TclMediaPlayer", value: "TclMediaPlayer", score: 1000, meta: "Medya Oynatıcı" },
       { name: "TclJSONQuery", value: "TclJSONQuery", score: 1000, meta: "JSON Veri Sorgulayıcı" },
+      { name: "TclSqlQuery", value: "TclSqlQuery", score: 1000, meta: "SQL Server Sorgu Nesnesi" },
+      { name: "TClSQLiteQuery", value: "TClSQLiteQuery", score: 1000, meta: "SQLite Sorgu Nesnesi" },
 
       // Events
       { name: "tbeOnClick", value: "tbeOnClick", score: 950, meta: "Tıklama Olayı Sabiti" },
@@ -2981,19 +3027,45 @@ const clomosyCompleter = {
       { name: "tbeOnTimer", value: "tbeOnTimer", score: 950, meta: "Sayaç Tetiklenme Olayı" },
       { name: "tbeOnBarcodeResult", value: "tbeOnBarcodeResult", score: 950, meta: "Barkod Okunma Olayı" },
 
-      // Core methods
+      // Core methods & Database connections
       { name: "ShowMessage", value: "ShowMessage('...');", score: 900, meta: "Dialog/Mesaj Kutusu" },
       { name: "DBSQLiteConnect", value: "DBSQLiteConnect(..., '');", score: 900, meta: "SQLite Bağlantısı Aç" },
       { name: "DBSQLiteQuery", value: "DBSQLiteQuery", score: 900, meta: "SQLite Sorgu Çalıştırıcı" },
+      { name: "DBSQLiteQueryWith", value: "DBSQLiteQueryWith('...');", score: 900, meta: "SQLite Doğrudan Sorgu" },
       { name: "DBSQLServerConnect", value: "DBSQLServerConnect(..., 1433);", score: 900, meta: "SQL Server Bağlantısı Aç" },
-      { name: "DBSQLServerQueryWith", value: "DBSQLServerQueryWith('...');", score: 900, meta: "SQL Server Sorgu Çalıştır" },
+      { name: "DBSQLServerQuery", value: "DBSQLServerQuery", score: 900, meta: "SQL Server Sorgu Nesnesi" },
+      { name: "DBSQLServerQueryWith", value: "DBSQLServerQueryWith('...');", score: 900, meta: "SQL Server Doğrudan Sorgu" },
+      { name: "ClDataSetFromJSON", value: "ClDataSetFromJSON('...');", score: 900, meta: "JSON'dan Dataset Oluştur" },
+      { name: "DBDatasetGetAsJSON", value: "DBDatasetGetAsJSON(...);", score: 900, meta: "Dataset'i JSON Yap" },
       { name: "PlayGameSound", value: "PlayGameSound(...);", score: 900, meta: "Ses Efekti Oynat" },
       { name: "RegisterSound", value: "RegisterSound('...');", score: 900, meta: "Ses Efekti Kaydet" },
       { name: "setImage", value: "setImage(..., '...');", score: 900, meta: "Görsel Dosyası Ata" },
       { name: "CallBarcodeReader", value: "CallBarcodeReader;", score: 900, meta: "Barkod Okuyucu Aç" },
       { name: "DeviceLocation", value: "DeviceLocation", score: 900, meta: "GPS Konum Nesnesi" },
 
-      // Properties
+      // Database Traversal & Commands
+      { name: "Open", value: "Open;", score: 880, meta: "Sorguyu / Tabloyu Aç" },
+      { name: "OpenOrExecute", value: "OpenOrExecute;", score: 880, meta: "Sorguyu Çalıştır ve Aç" },
+      { name: "Close", value: "Close;", score: 880, meta: "Sorguyu Kapat" },
+      { name: "First", value: "First;", score: 880, meta: "İlk Kayda Git" },
+      { name: "Next", value: "Next;", score: 880, meta: "Sonraki Kayda Git" },
+      { name: "Last", value: "Last;", score: 880, meta: "Son Kayda Git" },
+      { name: "Prior", value: "Prior;", score: 880, meta: "Önceki Kayda Git" },
+      { name: "Free", value: "Free;", score: 880, meta: "Bellekten Temizle" },
+      { name: "Edit", value: "Edit;", score: 880, meta: "Düzenleme Modunu Aç" },
+      { name: "Insert", value: "Insert;", score: 880, meta: "Yeni Kayıt Ekle" },
+      { name: "Post", value: "Post;", score: 880, meta: "Kayıt Değişikliklerini Kaydet" },
+      { name: "ExecSQL", value: "ExecSQL;", score: 880, meta: "SQL Komutunu Çalıştır" },
+      { name: "FieldByName", value: "FieldByName('...')", score: 880, meta: "Alan Değerine Eriş" },
+
+      // Field Value Conversions
+      { name: "AsString", value: "AsString", score: 870, meta: "Metin (String) Değer" },
+      { name: "AsInteger", value: "AsInteger", score: 870, meta: "Tam Sayı (Integer) Değer" },
+      { name: "AsFloat", value: "AsFloat", score: 870, meta: "Ondalıklı Sayı (Float) Değer" },
+      { name: "AsBoolean", value: "AsBoolean", score: 870, meta: "Mantıksal (Boolean) Değer" },
+      { name: "AsDateTime", value: "AsDateTime", score: 870, meta: "Tarih/Saat (DateTime) Değer" },
+
+      // Properties & JSON Metadata
       { name: "Align", value: "Align", score: 850, meta: "Bileşen Hizalaması" },
       { name: "Width", value: "Width", score: 850, meta: "Bileşen Genişliği" },
       { name: "Height", value: "Height", score: 850, meta: "Bileşen Yüksekliği" },
@@ -3002,7 +3074,17 @@ const clomosyCompleter = {
       { name: "BaseURL", value: "BaseURL", score: 850, meta: "REST API Taban URL" },
       { name: "Method", value: "Method", score: 850, meta: "REST API Metodu (rmGET/rmPOST)" },
       { name: "Accept", value: "Accept", score: 850, meta: "REST API Accept Türü" },
-      { name: "Execute", value: "Execute;", score: 850, meta: "REST API İsteği Gönder" }
+      { name: "Execute", value: "Execute;", score: 850, meta: "REST API İsteği Gönder" },
+      { name: "ExecuteAsync", value: "ExecuteAsync;", score: 850, meta: "Asenkron REST API Gönder" },
+      { name: "Connection", value: "Connection", score: 850, meta: "Sorgu Bağlantı Nesnesi" },
+      { name: "DBSQLServerConnection", value: "DBSQLServerConnection", score: 850, meta: "Global SQL Server Bağlantısı" },
+      { name: "RecordCount", value: "RecordCount", score: 850, meta: "Toplam Kayıt Sayısı" },
+      { name: "Found", value: "Found", score: 850, meta: "Kayıt Bulundu mu" },
+      { name: "EOF", value: "EOF", score: 850, meta: "Tablonun / Dataset'in Sonu mu" },
+      { name: "Eof", value: "Eof", score: 850, meta: "Tablonun / Dataset'in Sonu mu" },
+      { name: "getJSONString", value: "getJSONString", score: 850, meta: "Dataset'i JSON String Yap" },
+      { name: "LastExceptionClassName", value: "LastExceptionClassName", score: 850, meta: "Son Hata Sınıfı Adı" },
+      { name: "LastExceptionMessage", value: "LastExceptionMessage", score: 850, meta: "Son Hata Mesajı" }
     ];
     callback(null, completions);
   }
@@ -3735,14 +3817,17 @@ var
 void btnPlayClick;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'audio_archive.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS sesler (id INTEGER PRIMARY KEY, url TEXT);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   // Örnek ses verisi ekleme
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR IGNORE INTO sesler (id, url) VALUES (1, "https://www.clomosy.com/game/assets/Fire.wav");';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   // Veriyi sorgula ve MediaPlayer'a ata
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT url FROM sesler WHERE id = 1;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -3912,12 +3997,15 @@ var
   i: Integer;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'stocks.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS urunler (id INTEGER PRIMARY KEY, ad TEXT, miktar INTEGER);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR IGNORE INTO urunler (id, ad, miktar) VALUES (1, "iPhone 15", 45), (2, "MacBook Pro", 20), (3, "iPad Air", 35);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT ad, miktar FROM urunler;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -3967,15 +4055,18 @@ var
 void btnLoadClick;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'contacts.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS kisiler (id INTEGER PRIMARY KEY, ad TEXT, tel TEXT);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   // Örnek veri girişi
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR IGNORE INTO kisiler (ad, tel) VALUES ("Arda Çekiç", "555-1234"), ("Ahmet Kaya", "555-5678");';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   // ListView içine SQLite sorgusunu yükle
   listUsers.Clear;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT ad, tel FROM kisiler;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -4017,6 +4108,7 @@ var
   scannedCode = Clomosy.ScannedBarcode;
   
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'products.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT urun_adi, fiyat FROM stok WHERE barkod = "' + scannedCode + '";';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -4068,6 +4160,7 @@ var
 void dbConnect;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'student_records.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS ogrenci (id INTEGER PRIMARY KEY, isim TEXT, notu INTEGER);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
 }
@@ -4076,6 +4169,7 @@ void refreshList;
 {
   dbConnect;
   listStudents.Clear;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT isim, notu FROM ogrenci;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   while not Clomosy.DBSQLiteQuery.EOF do
@@ -4088,6 +4182,7 @@ void refreshList;
 void btnInsertClick;
 {
   dbConnect;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT INTO ogrenci (isim, notu) VALUES ("' + editStudentName.Text + '", ' + editGrade.Text + ');';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   ShowMessage('Öğrenci Kaydı Başarıyla Eklendi!');
@@ -4097,6 +4192,7 @@ void btnInsertClick;
 void btnUpdateClick;
 {
   dbConnect;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'UPDATE ogrenci SET notu = ' + editGrade.Text + ' WHERE isim = "' + editStudentName.Text + '";';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   ShowMessage('Öğrenci Notu Başarıyla Güncellendi!');
@@ -4106,6 +4202,7 @@ void btnUpdateClick;
 void btnDeleteClick;
 {
   dbConnect;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'DELETE FROM ogrenci WHERE isim = "' + editStudentName.Text + '";';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   ShowMessage('Öğrenci Kaydı Başarıyla Silindi!');
@@ -4165,9 +4262,11 @@ void refreshVehicles;
 {
   listVehicles.Clear;
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'fleet.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS araclar (plaka TEXT PRIMARY KEY, model TEXT);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT plaka, model FROM araclar;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   while not Clomosy.DBSQLiteQuery.EOF do
@@ -4180,6 +4279,7 @@ void refreshVehicles;
 void btnSaveVehicleClick;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'fleet.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR REPLACE INTO araclar (plaka, model) VALUES ("' + editPlate.Text + '", "' + editModel.Text + '");';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   ShowMessage('Araç Kaydı Başarıyla Oluşturuldu!');
@@ -4223,10 +4323,12 @@ void btnRenderChartClick;
 {
   // SQLite veritabanı satış tablosu oluştur
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'sales_report.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS satis (ay TEXT, miktar INTEGER);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
   // Örnek satış verilerini ekle
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR IGNORE INTO satis (ay, miktar) VALUES ("Ocak", 1500), ("Subat", 2200), ("Mart", 1800), ("Nisan", 3000);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -4234,6 +4336,7 @@ void btnRenderChartClick;
   chartSales.Clear;
   chartSales.Title = 'Aylık Satış Analizi';
   
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT ay, miktar FROM satis;';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -4273,6 +4376,7 @@ var
 void dbInit;
 {
   Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath + 'auth.db', '');
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT);';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
 }
@@ -4280,6 +4384,7 @@ void dbInit;
 void btnSignInClick;
 {
   dbInit;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'SELECT password FROM users WHERE username = "' + editUser.Text + '";';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   
@@ -4303,6 +4408,7 @@ void btnSignInClick;
 void btnSignUpClick;
 {
   dbInit;
+  Clomosy.DBSQLiteQuery.Close;
   Clomosy.DBSQLiteQuery.Sql.Text = 'INSERT OR REPLACE INTO users (username, password) VALUES ("' + editUser.Text + '", "' + editPass.Text + '");';
   Clomosy.DBSQLiteQuery.OpenOrExecute;
   ShowMessage('Kayıt Başarıyla Oluşturuldu! Şimdi Giriş Yapabilirsiniz.');
