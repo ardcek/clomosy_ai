@@ -58,12 +58,22 @@ Her sablon butonu, ilgili kodu dogrudan editore yukler ve uygun dil modunu otoma
 
 ### Clomosy API ve DB Sandbox
 
-Sol paneldeki ucuncu sekme, iki farkli test ortami sunar:
+Sol paneldeki üçüncü sekme, iki farklı test ve entegrasyon ortamı sunar:
 
-- **REST API Test**: Secilen bir API adresine (GitHub, Fake Store, JSONPlaceholder) gercek HTTP GET istegi gonderir, JSON yanitini gorsel olarak gosterir ve bunun Clomosy Pascal karsiligiini otomatik olarak uretir. Uretilen kod dogrudan editore enjekte edilebilir.
-- **SQLite SQL Test**: Girilen SQL sorgusunu simule eder, ornek sonuc tablosu olusturur ve sorgunun Clomosy `TclDBSQLiteQuery` karsiligiini uretir.
+- **REST API Test**: Seçilen bir API adresine (GitHub, Fake Store, JSONPlaceholder, Gemini API) gerçek HTTP istekleri (GET, POST, PUT, DELETE) gönderir. Dönen JSON yanıtını görselleştirir, girilen özel Header/Body parametrelerini otomatik algılar ve bunun Clomosy `TclRest` Pascal karşılığını dinamik `Accept` ve `ContentType` eşleştirmeleriyle anında üretir.
+- **SQLite SQL Test**: SQL.js WebAssembly motoru ile gerçek bir sanal veritabanı çalıştırır. `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `JOIN`, `CREATE TABLE` gibi tüm standart SQL sorguları anlık olarak çalışır ve güncellenir.
+- **Dinamik Veritabanı Şeması**: Sorguların ardından "Sanal Veritabanı Tabloları" listesi SQLite sistem kataloğunu sorgulayarak tabloları ve kolonlarını dinamik olarak günceller.
+- **SQLite & SQL Server Seçimi**: Kullanıcı yerel SQLite veya uzak SQL Server (MSSQL) arasında seçim yapabilir; kod üreteci seçilen veritabanı türüne ve sorgunun tipine (Select listelemesi veya Execute çalıştırması) uygun şablonlar üretir.
 
-Her iki modda da konsol terminali uzerinden islem loglarini gercek zamanli izleyebilirsiniz.
+### Canlı TRObject Emülatör Çalışma Zamanı (Runtime)
+
+- **TRObject Transpiler (`transpilePascalToJS`)**: Ace Editor'da yazılan TRObject (Pascal) kodları "Çalıştır" butonuna basıldığında JavaScript'e transpile edilerek canlı önizleme iframe'i içinde çalıştırılır.
+- **Etkileşimli Mobil Deneyim**: Iframe içerisinde Clomosy platformunun `TclForm`, `TclRest`, `TclJSONQuery`, `TclMediaPlayer` ve `Clomosy` sınıf yapıları simüle edilmiştir.
+  - Form üzerine eklenen buton, metin kutusu, liste (`TclListView`) gibi bileşenler gerçek zamanlı oluşturulur ve hizalanır (`Align`).
+  - Tıklama olayları (`AddNewEvent`) ve callback prosedürleri aktif olarak çalışır.
+  - Veritabanı (`DBSQLiteQuery`) ve REST API (`TclRest`) komutları emülatörde gerçek SQLite Wasm veritabanına ve dış ağ API'lerine bağlanarak veri çekip listeler.
+
+Konsol terminali üzerinden tüm işlem loglarını ve emülatör çalışma zamanı loglarını gerçek zamanlı izleyebilirsiniz.
 
 ### Clomosy Dokumantasyon Kitapligi
 
@@ -90,6 +100,10 @@ Pascal/TRObject dosyalari icin ozel bir statik kod analiz motoru calisir:
 - Canli durum cubugu: Aktif dil, toplam satir sayisi, imlek konumu ve secili karakter sayisi
 - Hosgeldiniz ekrani: Dosya acik olmadiginda kullaniciya hizli dosya acma butonlari sunar
 - Sekme kapatma destegi: Her dosya sekmesinde (X) butonu ile kapatma ve otomatik olarak bir sonraki acik dosyaya gecis
+- Temiz Başlangıç (Clean Startup): Uygulama ilk açıldığında üst sekmelerde hiçbir varsayılan dosya açık gelmez, tertemiz bir karşılama ekranı sunar.
+- Klavye Kısayolları Kılavuzu: Ace editöre ait en yaygın kısayolları (Arama, Değiştirme, Yorum Satırı, Girinti vb.) listeleyen modern bir modal pencere.
+- Önbellek Temizleme: Ayarlar & Görünüm sekmesinden editör geçmişini (açık sekmeler, son düzenlemeler ve ayarlar) çift aşamalı onay uyarısıyla sıfırlayabilme imkanı.
+- Gelişmiş Clomosy AI Eğitimi: Yapay zeka asistanının sistem talimatları, dökümantasyon kurallarına göre güncellendi (atama `=`, eşitlik `==`, mantıksal `&&`/`||` ve blok `{}` kuralları).
 - Tamamen Turkce arayuz
 
 ---

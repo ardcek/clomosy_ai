@@ -11,7 +11,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preload" href="sihirbaz.png" as="image" fetchpriority="high">
+  <link rel="stylesheet" href="style.css?v=35">
 </head>
 
 <body>
@@ -24,7 +25,7 @@
     <!-- Başlık -->
     <header class="app-header">
       <div class="header-logo">
-        <h1>Ace Editor <span>Interactive Showcase V3</span></h1>
+        <h1><a href="https://ardcek.com" target="_blank" class="header-logo-link">Ace Editor <span>Interactive Showcase V3</span></a></h1>
       </div>
       <p class="header-subtitle">Ace Editor (Ace JS) özelliklerini, temalarını, dillerini ve Javascript API
         fonksiyonlarını canlı olarak deneyimleyin.</p>
@@ -38,7 +39,8 @@
         <button class="activity-btn active" data-tab="settings" title="Görünüm & Ayarlar">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
         <button class="activity-btn conditional-btn" data-tab="snippets" title="Hazır Kütüphaneler & Kod Blokları">
@@ -67,9 +69,11 @@
       <!-- Sol Panel: Katmanlı Ayarlar ve Yardımcı Çekmece -->
       <section class="panel control-panel" id="main-control-panel">
         <div class="panel-header">
-          <svg id="panel-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg id="panel-header-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
             <circle cx="12" cy="12" r="3" />
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
           <h2 id="panel-title-text">Ayarlar & Görünüm</h2>
         </div>
@@ -105,7 +109,7 @@
                     <option value="python">Python</option>
                     <option value="json">JSON</option>
                     <option value="sql">SQL</option>
-                    <option value="pascal">Pascal / Delphi (TRObject)</option>
+                    <option value="pascal">TRObject</option>
                   </select>
                 </div>
               </div>
@@ -207,6 +211,39 @@
                 <span class="slider"></span>
                 <span class="toggle-label">Sol Paneli Gizle</span>
               </label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggle-ai-wizard" checked>
+                <span class="slider"></span>
+                <span class="toggle-label">AI Sihirbaz Yardımcısı</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Grup: Sistem ve Yardımcılar -->
+          <div class="control-group">
+            <h3>Sistem ve Yardımcılar</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <button id="btn-shortcuts-guide" class="btn" style="width: 100%; display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 8px; font-weight: 500; padding: 10px 14px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+                  <line x1="6" y1="8" x2="6" y2="8"></line>
+                  <line x1="10" y1="8" x2="10" y2="8"></line>
+                  <line x1="14" y1="8" x2="14" y2="8"></line>
+                  <line x1="18" y1="8" x2="18" y2="8"></line>
+                  <line x1="6" y1="12" x2="6" y2="12"></line>
+                  <line x1="10" y1="12" x2="10" y2="12"></line>
+                  <line x1="14" y1="12" x2="14" y2="12"></line>
+                  <line x1="18" y1="12" x2="18" y2="12"></line>
+                  <line x1="7" y1="16" x2="17" y2="16"></line>
+                </svg>
+                <span>Klavye Kısayolları Kılavuzu</span>
+              </button>
+              <button id="btn-clear-cache" class="btn-danger">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                <span>Önbelleği Temizle</span>
+              </button>
             </div>
           </div>
         </div>
@@ -274,14 +311,15 @@
           <div class="control-group" id="snippet-group-clomosy">
             <h3>Clomosy Kütüphanesi</h3>
             <div class="snippet-buttons">
-              <button class="btn btn-snippet" data-snippet="pas-form-components" title="Form Arayüzü & Temel Bileşenler">
+              <button class="btn btn-snippet" data-snippet="pas-form-components"
+                title="Form Arayüzü & Temel Bileşenler">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="3" width="18" height="18" rx="2" />
                   <path d="M21 9H3M21 15H3M12 3v18" />
                 </svg>
                 <span>Arayüz & Temel Bileşenler</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-memo" title="Memo ile Çok Satırlı Editör Arayüzü">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -291,7 +329,7 @@
                 </svg>
                 <span>TclMemo Editör Arayüzü</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-image" title="Image Bileşeni & Web Görsel Yükleme">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -300,7 +338,7 @@
                 </svg>
                 <span>TclImage Görsel Yükleme</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-listview" title="Custom ListView ile Veri Listeleme">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="8" y1="6" x2="21" y2="6" />
@@ -312,14 +350,14 @@
                 </svg>
                 <span>TclListView Veri Listesi</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-rest-api" title="TclRest ile Web REST API İstemcisi">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
                 </svg>
                 <span>TclRest HTTP API İstemcisi</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-sqlite" title="DBSQLite ile Yerel SQLite Veritabanı">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <ellipse cx="12" cy="5" rx="9" ry="3" />
@@ -328,8 +366,9 @@
                 </svg>
                 <span>SQLite Yerel Veritabanı</span>
               </button>
-              
-              <button class="btn btn-snippet" data-snippet="pas-sqlserver" title="DBSQLServerQuery ile Uzak MS SQL Server">
+
+              <button class="btn btn-snippet" data-snippet="pas-sqlserver"
+                title="DBSQLServerQuery ile Uzak MS SQL Server">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="2" y="2" width="20" height="8" rx="2" ry="2" />
                   <rect x="2" y="14" width="20" height="8" rx="2" ry="2" />
@@ -338,7 +377,7 @@
                 </svg>
                 <span>SQL Server Bağlantısı</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-timer" title="TclTimer Zamanlayıcı & Sayaç">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10" />
@@ -346,7 +385,7 @@
                 </svg>
                 <span>TclTimer Zamanlayıcı</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-sound" title="Ses Çalma & Oyun Efekti">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
@@ -354,7 +393,7 @@
                 </svg>
                 <span>Oyun Sesleri & PlaySound</span>
               </button>
-              
+
               <button class="btn btn-snippet" data-snippet="pas-gps" title="GPS Cihaz Konumu & Sensör Alımı">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
@@ -370,20 +409,27 @@
         <div id="section-sandbox" class="sidebar-section">
           <div class="control-group sandbox-group">
             <h3>Clomosy API & DB Sandbox</h3>
-            <p class="sandbox-desc">REST API isteklerini veya veritabanı sorgularını simüle edip test edin, Clomosy kodlarını anında üretin:</p>
+            <p class="sandbox-desc">REST API isteklerini veya veritabanı sorgularını simüle edip test edin, Clomosy
+              kodlarını anında üretin:</p>
 
             <!-- Mode Selector Switch -->
             <div class="sandbox-tabs" style="display: flex; gap: 8px; margin-bottom: 12px;">
-              <button class="btn btn-sandbox-tab active" id="btn-sandbox-rest" style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">REST API Test</button>
-              <button class="btn btn-sandbox-tab" id="btn-sandbox-db" style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">SQLite SQL Test</button>
+              <button class="btn btn-sandbox-tab active" id="btn-sandbox-rest"
+                style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">REST API
+                Test</button>
+              <button class="btn btn-sandbox-tab" id="btn-sandbox-db"
+                style="flex: 1; font-size: 11px; padding: 8px; border-radius: 6px; font-weight: 600;">SQLite SQL
+                Test</button>
             </div>
 
             <!-- Panel 1: REST API Tester -->
             <div id="sandbox-rest-panel" class="sandbox-panel-content">
               <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">HTTP Metodu</label>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">HTTP
+                  Metodu</label>
                 <div class="select-wrapper">
-                  <select id="sandbox-rest-method" style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
+                  <select id="sandbox-rest-method"
+                    style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
                     <option value="GET" selected>GET</option>
                     <option value="POST">POST</option>
                     <option value="PUT">PUT</option>
@@ -393,49 +439,67 @@
               </div>
 
               <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hazır Örnek API'ler (Otomatik Doldur)</label>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hazır
+                  Örnek API'ler (Otomatik Doldur)</label>
                 <div class="select-wrapper">
-                  <select id="sandbox-rest-url-select" style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
+                  <select id="sandbox-rest-url-select"
+                    style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
                     <option value="" disabled selected>Örnek API seçin...</option>
                     <option value="https://api.github.com/users/octocat">GitHub User API (octocat)</option>
                     <option value="https://fakestoreapi.com/products/1">Fake Store API (Product 1)</option>
                     <option value="https://jsonplaceholder.typicode.com/todos/1">Placeholder API (Todo 1)</option>
-                    <option value="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=API_KEY">Gemini API Chatbot Endpoint</option>
+                    <option
+                      value="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=API_KEY">
+                      Gemini API Chatbot Endpoint</option>
                   </select>
                 </div>
               </div>
 
               <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hedef REST URL</label>
-                <input type="text" id="sandbox-rest-url-input" value="https://jsonplaceholder.typicode.com/todos/1" placeholder="https://api.example.com/data" style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px; outline: none; box-sizing: border-box;">
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hedef REST
+                  URL</label>
+                <input type="text" id="sandbox-rest-url-input" value="https://jsonplaceholder.typicode.com/todos/1"
+                  placeholder="https://api.example.com/data"
+                  style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px; outline: none; box-sizing: border-box;">
               </div>
 
               <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">HTTP İstek Başlıkları (JSON Headers)</label>
-                <textarea id="sandbox-rest-headers" rows="2" placeholder='{"Accept": "application/json", "Authorization": "Bearer token"}' style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 11px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">HTTP İstek
+                  Başlıkları (JSON Headers)</label>
+                <textarea id="sandbox-rest-headers" rows="2"
+                  placeholder='{"Accept": "application/json", "Authorization": "Bearer token"}'
+                  style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 11px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
               </div>
 
               <div id="sandbox-rest-body-container" style="margin-bottom: 10px; display: none;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">İstek Gövdesi (JSON Request Body)</label>
-                <textarea id="sandbox-rest-body" rows="3" placeholder='{"key": "value"}' style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 11px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">İstek
+                  Gövdesi (JSON Request Body)</label>
+                <textarea id="sandbox-rest-body" rows="3" placeholder='{"key": "value"}'
+                  style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 11px; resize: vertical; box-sizing: border-box; outline: none;"></textarea>
               </div>
 
-              <button class="btn" id="btn-sandbox-send-rest" style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">REST İsteğini Gönder</button>
+              <button class="btn" id="btn-sandbox-send-rest"
+                style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">REST
+                İsteğini Gönder</button>
             </div>
 
             <!-- Panel 2: SQLite Query Tester -->
             <div id="sandbox-db-panel" class="sandbox-panel-content" style="display: none;">
               <!-- SQLite Şema Bilgi Kartı -->
-              <div class="sandbox-schema-info" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 8px; padding: 8px; margin-bottom: 10px; font-size: 11px; color: var(--text-muted);">
-                <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">Sanal Veritabanı Tabloları:</div>
+              <div class="sandbox-schema-info"
+                style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 8px; padding: 8px; margin-bottom: 10px; font-size: 11px; color: var(--text-muted);">
+                <div style="font-weight: 600; color: var(--primary); margin-bottom: 4px;">Sanal Veritabanı Tabloları:
+                </div>
                 <div style="font-family: monospace;">• users (ID, Isim, Rol, Aktif)</div>
                 <div style="font-family: monospace;">• projects (ProjeAdi, ToplamTroDosyasi, ToplamKodSatiri)</div>
               </div>
 
               <div style="margin-bottom: 8px;">
-                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hedef Veritabanı Türü</label>
+                <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Hedef
+                  Veritabanı Türü</label>
                 <div class="select-wrapper">
-                  <select id="sandbox-db-type" style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
+                  <select id="sandbox-db-type"
+                    style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px;">
                     <option value="sqlite" selected>SQLite (Yerel Veritabanı)</option>
                     <option value="mssql">SQL Server (Uzak/Bulut Veritabanı)</option>
                   </select>
@@ -443,10 +507,15 @@
               </div>
 
               <div style="margin-bottom: 10px;">
-                <label id="sandbox-db-query-label" style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">SQLite Sorgusu (SQL)</label>
-                <textarea id="sandbox-db-query" rows="2" style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 12px; resize: none; margin-bottom: 8px; outline: none; box-sizing: border-box;">SELECT * FROM users WHERE Aktif = 'Evet';</textarea>
+                <label id="sandbox-db-query-label"
+                  style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">SQLite Sorgusu
+                  (SQL)</label>
+                <textarea id="sandbox-db-query" rows="2"
+                  style="width: 100%; padding: 8px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-family: monospace; font-size: 12px; resize: none; margin-bottom: 8px; outline: none; box-sizing: border-box;">SELECT * FROM users WHERE Aktif = 'Evet';</textarea>
               </div>
-              <button class="btn" id="btn-sandbox-run-query" style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">SQL Sorgusunu Yürüt</button>
+              <button class="btn" id="btn-sandbox-run-query"
+                style="width: 100%; padding: 10px; background: var(--primary); border: none; border-radius: 6px; color: #fff; font-weight: bold; cursor: pointer; font-size: 12px; margin-bottom: 12px;">SQL
+                Sorgusunu Yürüt</button>
             </div>
 
             <!-- JSON veya SQL Sonuç Alanı -->
@@ -454,18 +523,23 @@
               <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <span id="sandbox-result-title">API Yanıtı (JSON):</span>
               </div>
-              <pre style="max-height: 140px; overflow-y: auto; background: #090a0f; border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 10px; font-size: 11px; color: #a5d6ff; margin: 0;"><code id="sandbox-result-output">// İstek sonuçları burada görüntülenecektir</code></pre>
+              <pre class="sandbox-output-pre"
+                id="sandbox-result-pre"><code id="sandbox-result-output">// İstek sonuçları burada görüntülenecektir</code></pre>
             </div>
 
             <!-- JSON Path Yardımcısı (Sadece REST Aktifken Görünür) -->
             <div id="sandbox-json-path-container" style="margin-bottom: 10px;">
               <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px;">
                 <div style="flex: 1;">
-                  <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Düğüm Filtresi (JSON Path)</label>
-                  <input type="text" id="sandbox-json-path-input" placeholder="Örn: candidates.0.content.parts.0.text" style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px; outline: none; box-sizing: border-box;">
+                  <label style="display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 2px;">Düğüm
+                    Filtresi (JSON Path)</label>
+                  <input type="text" id="sandbox-json-path-input" placeholder="Örn: candidates.0.content.parts.0.text"
+                    style="width: 100%; padding: 6px; background: #0d1117; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 11px; outline: none; box-sizing: border-box;">
                 </div>
               </div>
-              <div style="background: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); border-radius: 6px; padding: 6px; font-size: 10px; color: #14b8a6; font-family: monospace; word-break: break-all; min-height: 20px;" id="sandbox-json-path-result">
+              <div
+                style="background: rgba(20, 184, 166, 0.05); border: 1px solid rgba(20, 184, 166, 0.15); border-radius: 6px; padding: 6px; font-size: 10px; color: #14b8a6; font-family: monospace; word-break: break-all; min-height: 20px;"
+                id="sandbox-json-path-result">
                 // Seçilen yolun Clomosy.CLParseJSON karşılığı burada görünecektir
               </div>
             </div>
@@ -474,9 +548,10 @@
             <div class="code-execution-viewer" style="margin-bottom: 12px;">
               <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <span>Eşdeğer Clomosy Kodu:</span>
-                <button id="btn-sandbox-inject-code" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.25); color: #c7d2fe; font-size: 10px; padding: 2px 6px; border-radius: 4px; cursor: pointer;">Koda Ekle</button>
+                <button id="btn-sandbox-inject-code">Koda Ekle</button>
               </div>
-              <pre style="max-height: 110px; overflow-y: auto; background: #090a0f; border: 1px solid rgba(255,255,255,0.03); border-radius: 6px; padding: 10px; font-size: 11px; color: #8bc34a; margin: 0;"><code id="sandbox-clomosy-code">// Clomosy Pascal karşılığı burada üretilecektir</code></pre>
+              <pre class="sandbox-output-pre"
+                id="sandbox-clomosy-pre"><code id="sandbox-clomosy-code">// Clomosy Pascal karşılığı burada üretilecektir</code></pre>
             </div>
 
             <!-- Konsol Terminal Çıktısı -->
@@ -496,20 +571,25 @@
         <div id="section-docs" class="sidebar-section">
           <div class="control-group">
             <h3>Doküman Kitaplığı</h3>
-            <p class="sandbox-desc">Clomosy fonksiyonlarını, olaylarını ve sınıflarını arayın. Koda hızlıca enjekte edin:</p>
+            <p class="sandbox-desc">Clomosy fonksiyonlarını, olaylarını ve sınıflarını arayın. Koda hızlıca enjekte
+              edin:</p>
             <div class="field-row" style="margin-bottom: 12px; display: block;">
               <div style="position: relative; width: 100%;">
-                <input type="text" id="docs-search-input" placeholder="Bileşen veya metot arayın... (Örn: Rest, GPS)" 
-                       style="width: 100%; padding: 8px 30px 8px 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 13px; outline: none; box-sizing: border-box;">
-                <span style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #8b949e; pointer-events: none;">🔍</span>
+                <input type="text" id="docs-search-input" placeholder="Bileşen veya metot arayın... (Örn: Rest, GPS)"
+                  style="width: 100%; padding: 8px 30px 8px 10px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: #fff; font-size: 13px; outline: none; box-sizing: border-box;">
+                <span
+                  style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #8b949e; pointer-events: none;">🔍</span>
               </div>
             </div>
-            
-            <div id="docs-results-container" class="docs-results-scroll" style="max-height: calc(100vh - 220px); overflow-y: auto; padding-right: 5px;">
+
+            <div id="docs-results-container" class="docs-results-scroll"
+              style="max-height: calc(100vh - 220px); overflow-y: auto; padding-right: 5px;">
               <!-- Sonuçlar Javascript ile buraya dinamik dolacak -->
             </div>
           </div>
         </div>
+
+        <!-- 5. YAPAY ZEKA KOD ASİSTANI (AI ASSISTANT) PANELİ KALDIRILDI -->
       </section>
 
       <!-- Sağ Panel: Ace Editörünü içeren IDE Penceresi -->
@@ -590,52 +670,7 @@
         <!-- Sekmeler Satırı (Alt Kısım - Ayrı Satır Olarak Çakışmayı Önler) -->
         <div class="tabs-row-container">
           <div class="file-tabs" id="file-tabs-bar">
-            <div class="tab" data-file="javascript" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-js">JS</span>
-              <span>script.js</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="html" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-html">HTML</span>
-              <span>index.html</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="css" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-css">CSS</span>
-              <span>style.css</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="python" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-py">PY</span>
-              <span>main.py</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="json" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-json">JSON</span>
-              <span>package.json</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="sql" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-sql">SQL</span>
-              <span>queries.sql</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-            <div class="tab" data-file="pascal" data-tab="editor-view" style="display: none;">
-              <span class="tab-icon-tro">TRO</span>
-              <span>mainCode.tro</span>
-              <span class="tab-close-btn">&times;</span>
-            </div>
-
-            <div class="tab-separator" id="preview-tab-separator" style="display: none;">|</div>
-
-            <div class="tab" data-tab="preview-view" id="tab-preview-btn" style="display: none;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                class="tab-icon-preview">
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-              <span>Canlı Önizleme</span>
-            </div>
+            <!-- Dinamik sekmeler JavaScript tarafından buraya eklenecektir -->
           </div>
         </div>
 
@@ -700,6 +735,162 @@
     </footer>
   </div>
 
+  <!-- Floating AI Wizard Mascot Widget -->
+  <div id="ai-wizard-widget">
+    <!-- Bubble text -->
+    <div id="ai-wizard-bubble">Merhaba! Clomosy kodlarında yardıma ihtiyacın var mı?</div>
+    
+    <!-- Mascot Image -->
+    <div id="ai-wizard-mascot">
+      <button id="btn-hide-mascot" title="Sihirbazı Gizle">&times;</button>
+      <img src="sihirbaz.png" alt="Clomosy AI Sihirbazı" loading="eager" fetchpriority="high">
+    </div>
+
+    <!-- Chat/Settings Popup Panel -->
+    <div id="ai-wizard-popup" class="hidden">
+      <!-- Popup Header -->
+      <div class="ai-popup-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <img src="sihirbaz.png" alt="Sihirbaz" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" loading="eager" fetchpriority="high">
+          <span>Clomosy AI Sihirbazı</span>
+        </div>
+        <button id="btn-close-ai-popup" title="Kapat">&times;</button>
+      </div>
+
+      <!-- Popup Content (Key verification) -->
+      <div id="ai-popup-key-view" class="ai-popup-body hidden">
+        <div style="padding: 16px; text-align: center;">
+          <div style="font-size: 32px; margin-bottom: 10px;">🔮</div>
+          <h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--text-main);">API Anahtarı Gerekli</h4>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.4;">Yapay Zeka Sihirbazı ile sohbet edebilmek için lütfen Gemini API anahtarınızı girin:</p>
+          <input type="password" id="ai-popup-api-key" placeholder="API Anahtarınızı girin..." style="width: 100%; padding: 8px; font-size: 12px; border-radius: 6px; border: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2); color: #fff; box-sizing: border-box; outline: none; margin-bottom: 12px;">
+          <button id="btn-save-popup-key" style="width: 100%; padding: 8px; font-size: 12px; font-weight: 600; border-radius: 6px; cursor: pointer; border: none; background: var(--primary); color: #fff;">Anahtarı Kaydet</button>
+          <p style="font-size: 9px; color: var(--text-muted); margin-top: 10px;">API anahtarınızı Google AI Studio üzerinden ücretsiz alabilirsiniz.</p>
+        </div>
+      </div>
+
+      <!-- Popup Content (Chat view) -->
+      <div id="ai-popup-chat-view" class="ai-popup-body">
+        <!-- Preset Actions -->
+        <div class="ai-popup-presets">
+          <button class="btn btn-ai-preset" id="btn-ai-explain" title="Aktif editördeki kodu açıklar">Kodu Açıkla</button>
+          <button class="btn btn-ai-preset" id="btn-ai-findbugs" title="Hataları bulur">Hata Ayıkla</button>
+          <button class="btn btn-ai-preset" id="btn-ai-optimize" title="Kodu optimize eder">Optimize Et</button>
+          <button class="btn btn-ai-preset" id="btn-ai-dochelp" title="Seçilen kelime için yardım">Yardım Al</button>
+        </div>
+        
+        <!-- Chat logs -->
+        <div class="ai-chat-messages" id="ai-chat-messages">
+          <div class="ai-msg bot">
+            <div class="msg-sender">AI Sihirbazı</div>
+            <div class="msg-text">Selam! Ben Clomosy Yapay Zeka Sihirbazıyım. 🔮 Kodunu optimize edebilir, hata ayıklayabilir veya sorularına cevap verebilirim. Nasıl yardımcı olabilirim?</div>
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="ai-chat-input-bar">
+          <textarea id="ai-chat-input" placeholder="Sihirbaza sor..." rows="1"></textarea>
+          <button id="btn-send-ai-msg" title="Gönder">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- Small link to change API key -->
+        <div style="background: rgba(0, 0, 0, 0.1); border-top: 1px solid var(--border-color); padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+          <span style="font-size: 9px; color: var(--text-muted);" id="ai-popup-key-status">API Key: Aktif</span>
+          <button id="btn-change-popup-key" style="background: none; border: none; font-size: 9px; color: var(--primary); cursor: pointer; text-decoration: underline; padding: 0;">Değiştir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Klavye Kısayolları Kılavuzu Modal Overlay -->
+  <div id="shortcuts-guide-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <line x1="6" y1="8" x2="6" y2="8"></line>
+            <line x1="10" y1="8" x2="10" y2="8"></line>
+            <line x1="14" y1="8" x2="14" y2="8"></line>
+            <line x1="18" y1="8" x2="18" y2="8"></line>
+            <line x1="6" y1="12" x2="6" y2="12"></line>
+            <line x1="10" y1="12" x2="10" y2="12"></line>
+            <line x1="14" y1="12" x2="14" y2="12"></line>
+            <line x1="18" y1="12" x2="18" y2="12"></line>
+            <line x1="7" y1="16" x2="17" y2="16"></line>
+          </svg>
+          <span>Klavye Kısayolları Kılavuzu</span>
+        </h2>
+        <button id="btn-close-shortcuts-modal" class="modal-close-btn" title="Kapat">&times;</button>
+      </div>
+      <div class="modal-body">
+        <table class="shortcuts-table">
+          <thead>
+            <tr>
+              <th>İşlem / Kısayol Amacı</th>
+              <th>Klavye Kombinasyonu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Kod Arama (Bul)</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>F</kbd></td>
+            </tr>
+            <tr>
+              <td>Bul ve Değiştir</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>H</kbd></td>
+            </tr>
+            <tr>
+              <td>Geri Al (Undo)</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>Z</kbd></td>
+            </tr>
+            <tr>
+              <td>İleri Al (Redo)</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td>
+            </tr>
+            <tr>
+              <td>Satırı Yorum Satırı Yap / Kaldır</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>/</kbd></td>
+            </tr>
+            <tr>
+              <td>Kod Önerileri (Otomatik Tamamlama)</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>Space</kbd></td>
+            </tr>
+            <tr>
+              <td>Seçili Kelimenin Sonraki Eşini Çoklu Seç</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>D</kbd></td>
+            </tr>
+            <tr>
+              <td>Satırı Yukarı/Aşağı Taşı</td>
+              <td class="shortcut-kbd-cell"><kbd>Alt</kbd> + <kbd>Up</kbd> / <kbd>Down</kbd></td>
+            </tr>
+            <tr>
+              <td>Mevcut Satırı Çoğalt (Kopyala)</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>D</kbd></td>
+            </tr>
+            <tr>
+              <td>Belirtilen Satıra Git</td>
+              <td class="shortcut-kbd-cell"><kbd>Ctrl</kbd> + <kbd>L</kbd></td>
+            </tr>
+            <tr>
+              <td>Satır Girintisini Artır (Indent)</td>
+              <td class="shortcut-kbd-cell"><kbd>Tab</kbd></td>
+            </tr>
+            <tr>
+              <td>Satır Girintisini Azalt (Outdent)</td>
+              <td class="shortcut-kbd-cell"><kbd>Shift</kbd> + <kbd>Tab</kbd></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <!-- Cdnjs'ten Yüklenen: Ana Ace JS Kütüphanesi -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
   <!-- Cdnjs'ten Yüklenen: Ace Dil Araçları (Otomatik Tamamlama / Kod Şablonları) -->
@@ -712,7 +903,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/keybinding-emacs.min.js"></script>
   <!-- SQL.js SQLite WebAssembly Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
-  <script src="script.js"></script>
+  <script src="script.js?v=35"></script>
 </body>
 
 </html>

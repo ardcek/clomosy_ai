@@ -1,6 +1,98 @@
 // Ace Editörünü Başlat
 const editor = ace.edit("editor-container");
 
+// Ace Drag & Drop Snippets Logic
+const editorContainer = document.getElementById("editor-container");
+
+if (editorContainer) {
+  editorContainer.addEventListener("dragenter", function (e) {
+    e.preventDefault();
+    editorContainer.classList.add("drag-over");
+  });
+
+  editorContainer.addEventListener("dragover", function (e) {
+    e.preventDefault();
+    editorContainer.classList.add("drag-over");
+    
+    try {
+      const position = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+      if (position) {
+        editor.moveCursorToPosition(position);
+        editor.focus();
+      }
+    } catch (err) {
+      console.error("Dragover cursor movement error:", err);
+    }
+  });
+
+  editorContainer.addEventListener("dragleave", function (e) {
+    if (!editorContainer.contains(e.relatedTarget)) {
+      editorContainer.classList.remove("drag-over");
+    }
+  });
+
+  editorContainer.addEventListener("drop", function (e) {
+    e.preventDefault();
+    editorContainer.classList.remove("drag-over");
+    
+    try {
+      let code = e.dataTransfer.getData("text/plain");
+      if (code) {
+        const position = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+        if (position) {
+          const lineContent = editor.session.getLine(position.row);
+          const isLineEmpty = !lineContent || lineContent.trim().length === 0;
+          
+          let codeToInsert = code;
+          const cleanCode = code.trim();
+          let hasLeadingVar = false;
+          let codeWithoutVar = code;
+
+          // Eğer kod "var" ile başlıyorsa ve drop hedefinin çevresinde zaten "var" varsa
+          if (cleanCode.toLowerCase().startsWith("var")) {
+            hasLeadingVar = true;
+            const match = code.match(/^\s*var\s*\r?\n?/i);
+            if (match) {
+              codeWithoutVar = code.substring(match[0].length);
+            }
+          }
+
+          const targetLineTrimmed = lineContent ? lineContent.trim().toLowerCase() : "";
+          let isPrevVar = false;
+          let prevRow = position.row - 1;
+          while (prevRow >= 0) {
+            const prevLine = editor.session.getLine(prevRow).trim().toLowerCase();
+            if (prevLine.length > 0) {
+              if (prevLine === "var") {
+                isPrevVar = true;
+              }
+              break;
+            }
+            prevRow--;
+          }
+
+          if (hasLeadingVar && (targetLineTrimmed === "var" || isPrevVar)) {
+            codeToInsert = codeWithoutVar;
+          }
+
+          if (!isLineEmpty) {
+            // Eğer satırda kod/yazı varsa, sürüklenen kodu bir alt satıra yeni bir satır olarak ekle
+            editor.session.insert({ row: position.row, column: lineContent.length }, "\n" + codeToInsert);
+          } else {
+            // Satır boşsa doğrudan o satıra ekle
+            editor.session.insert({ row: position.row, column: 0 }, codeToInsert);
+          }
+          
+          editor.focus();
+          logToConsole("Sürüklenen kod bloğu editöre başarıyla yerleştirildi.", "system-msg");
+        }
+      }
+    } catch (err) {
+      console.error("Drop insertion error:", err);
+    }
+  });
+}
+
 // Ace'i tema, mod ve worker'ları resmi CDN'den dinamik yükleyecek şekilde yapılandır
 ace.config.set('basePath', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/');
 
@@ -13,25 +105,25 @@ ace.define("ace/mode/trobject_highlight_rules", ["require", "exports", "module",
   var TRObjectHighlightRules = function () {
     this.$rules = {
       "start": [
-        { token: "comment", regex: "\\/\\/.*$" },
-        { token: "comment", regex: "\\/\\*", next: "comment" },
-        { token: "string", regex: "'.*?'" },
-        { token: "string", regex: '".*?"' },
+        { token: "comment", regex: /\/\/.*$/ },
+        { token: "comment", regex: /\/\*/, next: "comment" },
+        { token: "string", regex: /'.*?'/ },
+        { token: "string", regex: /".*?"/ },
         
         // Sayılar (300, 45, vb.) -> Clomosy IDE'sinde olduğu gibi Yeşil (Dracula'da entity.name.function yeşildir)
-        { token: "entity.name.function", regex: "\\b\\d+(?:\\.\\d+)?\\b" },
+        { token: "entity.name.function", regex: /\b\d+(?:\.\d+)?\b/ },
         
         // Anahtar Kelimeler (var, void, self vb.) -> Açık Mavi/Camgöbeği (Dracula'da support.type)
-        { token: "support.type", regex: "\\b(?:var|void|if|else|while|for|try|except|finally|begin|end|class|type|procedure|function|do|then|break|continue|exit|return|const|case|switch|default|true|false|nil|True|False|Nil|Self|self)\\b", caseInsensitive: true },
+        { token: "support.type", regex: /\b(?:var|void|if|else|while|for|try|except|finally|begin|end|class|type|procedure|function|do|then|break|continue|exit|return|const|case|switch|default|true|false|nil|self)\b/i },
         
         // Operatörler ve Noktalama İşaretleri ( { } ( ) . , ; : = ) -> Pembe (Dracula'da keyword.operator)
-        { token: "keyword.operator", regex: "[\\{\\}\\(\\)\\[\\]\\.\\,\\;\\:\\=\\<\\>\\+\\-\\*\\/]" },
+        { token: "keyword.operator", regex: /[\{\}\(\)\[\]\.\,\;\:\=\<\>\+\-\*\/]/ },
         
         // Geri kalan her şey (ShowMessage, TclForm, değişken isimleri vb.) eşleşmeyip varsayılan olarak Düz Beyaz (text) kalacak.
-        { token: "text", regex: "\\s+" }
+        { token: "text", regex: /\s+/ }
       ],
       "comment": [
-        { token: "comment", regex: "\\*\\/", next: "start" },
+        { token: "comment", regex: /\*\//, next: "start" },
         { defaultToken: "comment" }
       ]
     };
@@ -41,20 +133,18 @@ ace.define("ace/mode/trobject_highlight_rules", ["require", "exports", "module",
   exports.TRObjectHighlightRules = TRObjectHighlightRules;
 });
 
-ace.define("ace/mode/trobject", ["require", "exports", "module", "ace/lib/oop", "ace/mode/javascript", "ace/mode/trobject_highlight_rules"], function (require, exports, module) {
+ace.define("ace/mode/trobject", ["require", "exports", "module", "ace/lib/oop", "ace/mode/text", "ace/mode/trobject_highlight_rules"], function (require, exports, module) {
   "use strict";
   var oop = require("../lib/oop");
-  var JavaScriptMode = require("./javascript").Mode;
+  var TextMode = require("./text").Mode;
   var TRObjectHighlightRules = require("./trobject_highlight_rules").TRObjectHighlightRules;
 
   var Mode = function () {
-    JavaScriptMode.call(this);
     this.HighlightRules = TRObjectHighlightRules;
   };
-  oop.inherits(Mode, JavaScriptMode);
+  oop.inherits(Mode, TextMode);
   
   (function () {
-    this.createWorker = function(session) { return null; }; // JS Linter worker'ını kapat
     this.$id = "ace/mode/trobject";
   }).call(Mode.prototype);
 
@@ -253,7 +343,7 @@ void testBtnClick;
 };
 
 // Çoklu Dosya Yapısı Hafıza State'i (Düzenlemeleri kaybetmemek için)
-const filesState = {
+let filesState = {
   javascript: codeTemplates.javascript,
   html: codeTemplates.html,
   css: codeTemplates.css,
@@ -263,6 +353,471 @@ const filesState = {
   pascal: codeTemplates.pascal
 };
 let currentActiveFile = null; // Başlangıçta hiçbir dosya açık değil
+let currentActiveTabId = null; // Aktif sekme kimliği (pascal_17189... vb.)
+
+// Başlangıç sekmeleri listesi
+let openTabs = [];
+
+// --- Otomatik Kaydetme ve Geri Yükleme Sistemi (Session Persistence) ---
+function saveEditorSessionState() {
+  if (currentActiveTabId && filesState[currentActiveTabId] !== undefined) {
+    filesState[currentActiveTabId] = editor.getValue();
+  }
+
+  const sessionData = {
+    filesState: filesState,
+    currentActiveFile: currentActiveFile,
+    currentActiveTabId: currentActiveTabId,
+    openTabs: openTabs,
+    settings: {
+      theme: document.getElementById("theme-select") ? document.getElementById("theme-select").value : "dracula",
+      interfaceTheme: document.getElementById("toggle-interface-theme") ? document.getElementById("toggle-interface-theme").checked : false,
+      keybindings: document.getElementById("keybindings-select") ? document.getElementById("keybindings-select").value : "default",
+      tabSize: document.getElementById("tab-size-select") ? document.getElementById("tab-size-select").value : "2",
+      fontSize: document.getElementById("font-size-slider") ? document.getElementById("font-size-slider").value : "14",
+      lineHeight: document.getElementById("line-height-slider") ? document.getElementById("line-height-slider").value : "1.5",
+      gutter: document.getElementById("toggle-gutter") ? document.getElementById("toggle-gutter").checked : true,
+      wrap: document.getElementById("toggle-wrap") ? document.getElementById("toggle-wrap").checked : false,
+      margin: document.getElementById("toggle-margin") ? document.getElementById("toggle-margin").checked : true,
+      readonly: document.getElementById("toggle-readonly") ? document.getElementById("toggle-readonly").checked : false,
+      activeLine: document.getElementById("toggle-active-line") ? document.getElementById("toggle-active-line").checked : true,
+      autocomplete: document.getElementById("toggle-autocomplete") ? document.getElementById("toggle-autocomplete").checked : true,
+      scrollPastEnd: document.getElementById("toggle-scroll-past-end") ? document.getElementById("toggle-scroll-past-end").checked : true,
+      autorun: document.getElementById("toggle-autorun") ? document.getElementById("toggle-autorun").checked : true,
+      aiWizard: document.getElementById("toggle-ai-wizard") ? document.getElementById("toggle-ai-wizard").checked : true
+    }
+  };
+  localStorage.setItem("clomosy_ide_session", JSON.stringify(sessionData));
+}
+
+// Sekmeleri Arayüzde Çizdirme Fonksiyonu
+function renderTabs() {
+  const fileTabsBar = document.getElementById("file-tabs-bar");
+  if (!fileTabsBar) return;
+
+  fileTabsBar.innerHTML = "";
+
+  // 1. Sekmeleri oluştur
+  openTabs.forEach(tab => {
+    const tabEl = document.createElement("div");
+    tabEl.className = `tab ${tab.id === currentActiveTabId ? 'active' : ''}`;
+    tabEl.setAttribute("data-file", tab.id);
+    tabEl.setAttribute("data-file-type", tab.fileType);
+    tabEl.setAttribute("data-tab", "editor-view");
+
+    let iconHTML = "";
+    switch (tab.fileType) {
+      case 'javascript': iconHTML = '<span class="tab-icon-js">JS</span>'; break;
+      case 'html': iconHTML = '<span class="tab-icon-html">HTML</span>'; break;
+      case 'css': iconHTML = '<span class="tab-icon-css">CSS</span>'; break;
+      case 'python': iconHTML = '<span class="tab-icon-py">PY</span>'; break;
+      case 'json': iconHTML = '<span class="tab-icon-json">JSON</span>'; break;
+      case 'sql': iconHTML = '<span class="tab-icon-sql">SQL</span>'; break;
+      case 'pascal': iconHTML = '<span class="tab-icon-tro">TRO</span>'; break;
+      case 'newtab':
+        iconHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 2px; color: var(--text-muted); opacity: 0.8;">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          <path d="M2 12h20"/>
+        </svg>`;
+        break;
+    }
+
+    tabEl.innerHTML = `
+      ${iconHTML}
+      <span>${tab.label}</span>
+      <span class="tab-close-btn" title="Kapat">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </span>
+    `;
+
+    // Tıklama Olayı: Sekmeye geçiş yap
+    tabEl.addEventListener("click", function (e) {
+      if (e.target.closest(".tab-close-btn")) return;
+      switchFileTab(tab.id);
+    });
+
+    fileTabsBar.appendChild(tabEl);
+  });
+
+  // 2. Chrome tarzı Yeni Sekme Artı (+) Butonunu Ekle (Hemen sekmelerin yanına, sadece sekme varsa)
+  if (openTabs.length > 0) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "tab-add-wrapper";
+
+    const plusTab = document.createElement("div");
+    plusTab.className = "tab-add-inline";
+    plusTab.innerHTML = `
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    `;
+    plusTab.title = "Yeni Sekme Aç (Chrome Tarzı)";
+    plusTab.addEventListener("click", function (e) {
+      e.stopPropagation();
+      addNewTab("newtab");
+    });
+    
+    wrapper.appendChild(plusTab);
+    fileTabsBar.appendChild(wrapper);
+  }
+
+  // 3. Ayrıcı Çizgi ve Canlı Önizleme Sekmesi
+  if (openTabs.length > 0) {
+    const separator = document.createElement("div");
+    separator.className = "tab-separator";
+    separator.id = "preview-tab-separator";
+    separator.innerText = "|";
+    fileTabsBar.appendChild(separator);
+
+    const previewTab = document.createElement("div");
+    previewTab.className = "tab";
+    previewTab.id = "tab-preview-btn";
+    previewTab.setAttribute("data-tab", "preview-view");
+    previewTab.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="tab-icon-preview">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+      <span>Canlı Önizleme</span>
+    `;
+
+    previewTab.addEventListener("click", function () {
+      switchToPreviewTab();
+    });
+
+    fileTabsBar.appendChild(previewTab);
+  }
+
+  // Kapatma butonu dinleyicilerini bağla
+  bindTabCloseEvents();
+}
+
+// Chrome Tarzı Yeni Sekme Ekleme Fonksiyonu
+function addNewTab(fileType) {
+  let label = "Yeni Sekme";
+  if (fileType !== "newtab") {
+    let baseName = "untitled";
+    let ext = "js";
+    switch (fileType) {
+      case 'javascript': baseName = "script"; ext = "js"; break;
+      case 'html': baseName = "index"; ext = "html"; break;
+      case 'css': baseName = "style"; ext = "css"; break;
+      case 'python': baseName = "main"; ext = "py"; break;
+      case 'json': baseName = "package"; ext = "json"; break;
+      case 'sql': baseName = "queries"; ext = "sql"; break;
+      case 'pascal': baseName = "mainCode"; ext = "tro"; break;
+    }
+
+    label = `${baseName}.${ext}`;
+    let suffix = 0;
+    while (openTabs.some(t => t.label === label)) {
+      suffix++;
+      label = `${baseName}(${suffix}).${ext}`;
+    }
+  }
+
+  const newTabId = `${fileType}_${Date.now()}`;
+  filesState[newTabId] = fileType === "newtab" ? "" : (codeTemplates[fileType] || "");
+
+  openTabs.push({
+    id: newTabId,
+    label: label,
+    fileType: fileType
+  });
+
+  renderTabs();
+  switchFileTab(newTabId);
+  saveEditorSessionState();
+}
+
+// Yeni Sekme Ekleme Menü Olayları (Dinamik artı butonu kullandığımız için devre dışı bırakıldı)
+function initAddTabEvents() {}
+
+function loadEditorSessionState() {
+  const rawData = localStorage.getItem("clomosy_ide_session");
+  if (!rawData) return false;
+  
+  try {
+    const sessionData = JSON.parse(rawData);
+    if (!sessionData || !sessionData.filesState) return false;
+
+    // Eğer session sadece varsayılan sekmeleri içeriyorsa, temizleyip fresh start yapalım
+    const defaultIds = ["pascal", "javascript", "html", "css", "python", "json", "sql"];
+    let isDefaultTabs = sessionData.openTabs && Array.isArray(sessionData.openTabs) && sessionData.openTabs.length === 7;
+    if (isDefaultTabs) {
+      isDefaultTabs = sessionData.openTabs.every((tab, index) => {
+        const id = typeof tab === 'object' ? tab.id : tab;
+        return id === defaultIds[index];
+      });
+    }
+    if (isDefaultTabs) {
+      localStorage.removeItem("clomosy_ide_session");
+      return false;
+    }
+    
+    // 1. Dosya içeriklerini geri yükle
+    filesState = {};
+    for (const key in sessionData.filesState) {
+      if (sessionData.filesState.hasOwnProperty(key)) {
+        filesState[key] = sessionData.filesState[key];
+      }
+    }
+    
+    // 2. Sekmeleri geri yükle
+    if (sessionData.openTabs && Array.isArray(sessionData.openTabs)) {
+      if (sessionData.openTabs.length > 0 && typeof sessionData.openTabs[0] === 'object') {
+        openTabs = sessionData.openTabs;
+      } else {
+        // Geriye dönük uyumluluk (eski session verisi için)
+        openTabs = sessionData.openTabs.map(fileType => {
+          let label = "script.js";
+          switch (fileType) {
+            case 'javascript': label = 'script.js'; break;
+            case 'html': label = 'index.html'; break;
+            case 'css': label = 'style.css'; break;
+            case 'python': label = 'main.py'; break;
+            case 'json': label = 'package.json'; break;
+            case 'sql': label = 'queries.sql'; break;
+            case 'pascal': label = 'mainCode.tro'; break;
+          }
+          return { id: fileType, label: label, fileType: fileType };
+        });
+      }
+    }
+    
+    renderTabs();
+
+    // 3. Ayarları uygula
+    const settings = sessionData.settings;
+    if (settings) {
+      // Tema
+      try {
+        const themeSelect = document.getElementById("theme-select");
+        if (themeSelect && settings.theme) {
+          themeSelect.value = settings.theme;
+          editor.setTheme("ace/theme/" + settings.theme);
+        }
+      } catch (e) {
+        console.error("Session theme restore error:", e);
+      }
+      
+      // Arayüz Teması
+      try {
+        const interfaceThemeCheckbox = document.getElementById("toggle-interface-theme");
+        if (interfaceThemeCheckbox && settings.interfaceTheme !== undefined) {
+          interfaceThemeCheckbox.checked = settings.interfaceTheme;
+          if (settings.interfaceTheme) {
+            document.documentElement.setAttribute("data-theme", "light");
+            localStorage.setItem("theme", "light");
+          } else {
+            document.documentElement.removeAttribute("data-theme");
+            localStorage.setItem("theme", "dark");
+          }
+        }
+      } catch (e) {
+        console.error("Session interface theme restore error:", e);
+      }
+      
+      // Klavye Düzeni
+      try {
+        const keybindingsSelect = document.getElementById("keybindings-select");
+        if (keybindingsSelect && settings.keybindings) {
+          keybindingsSelect.value = settings.keybindings;
+          if (settings.keybindings === "vim") {
+            editor.setKeyboardHandler("ace/keyboard/vim");
+          } else if (settings.keybindings === "emacs") {
+            editor.setKeyboardHandler("ace/keyboard/emacs");
+          } else {
+            editor.setKeyboardHandler(null);
+          }
+        }
+      } catch (e) {
+        console.error("Session keybindings restore error:", e);
+      }
+      
+      // Girinti Boyutu
+      try {
+        const tabSizeSelect = document.getElementById("tab-size-select");
+        if (tabSizeSelect && settings.tabSize) {
+          const parsedTabSize = parseInt(settings.tabSize);
+          if (!isNaN(parsedTabSize)) {
+            tabSizeSelect.value = settings.tabSize;
+            editor.session.setTabSize(parsedTabSize);
+          }
+        }
+      } catch (e) {
+        console.error("Session tab size restore error:", e);
+      }
+      
+      // Yazı Boyutu
+      try {
+        const fontSizeVal = document.getElementById("font-size-val");
+        const fontSizeSlider = document.getElementById("font-size-slider");
+        if (fontSizeSlider && settings.fontSize) {
+          fontSizeSlider.value = settings.fontSize;
+          editor.setFontSize(settings.fontSize + "px");
+          if (fontSizeVal) fontSizeVal.innerText = settings.fontSize + "px";
+        }
+      } catch (e) {
+        console.error("Session font size restore error:", e);
+      }
+      
+      // Satır Aralığı
+      try {
+        const lineHeightVal = document.getElementById("line-height-val");
+        const lineHeightSlider = document.getElementById("line-height-slider");
+        if (lineHeightSlider && settings.lineHeight) {
+          lineHeightSlider.value = settings.lineHeight;
+          const editorContainer = document.getElementById("editor-container");
+          if (editorContainer) editorContainer.style.lineHeight = settings.lineHeight;
+          if (lineHeightVal) lineHeightVal.innerText = settings.lineHeight;
+          editor.renderer.updateFull();
+        }
+      } catch (e) {
+        console.error("Session line height restore error:", e);
+      }
+      
+      // Satır Numaraları
+      try {
+        const gutterToggle = document.getElementById("toggle-gutter");
+        if (gutterToggle && settings.gutter !== undefined) {
+          gutterToggle.checked = settings.gutter;
+          editor.renderer.setShowGutter(settings.gutter);
+        }
+      } catch (e) {
+        console.error("Session gutter restore error:", e);
+      }
+      
+      // Metin Kaydırma
+      try {
+        const wrapToggle = document.getElementById("toggle-wrap");
+        if (wrapToggle && settings.wrap !== undefined) {
+          wrapToggle.checked = settings.wrap;
+          editor.session.setUseWrapMode(settings.wrap);
+        }
+      } catch (e) {
+        console.error("Session wrap mode restore error:", e);
+      }
+      
+      // Baskı Kılavuzu
+      try {
+        const marginToggle = document.getElementById("toggle-margin");
+        if (marginToggle && settings.margin !== undefined) {
+          marginToggle.checked = settings.margin;
+          editor.setShowPrintMargin(settings.margin);
+        }
+      } catch (e) {
+        console.error("Session print margin restore error:", e);
+      }
+      
+      // Salt Okunur
+      try {
+        const readonlyToggle = document.getElementById("toggle-readonly");
+        if (readonlyToggle && settings.readonly !== undefined) {
+          readonlyToggle.checked = settings.readonly;
+          editor.setReadOnly(settings.readonly);
+        }
+      } catch (e) {
+        console.error("Session readonly restore error:", e);
+      }
+      
+      // Aktif Satır Vurgulama
+      try {
+        const activeLineToggle = document.getElementById("toggle-active-line");
+        if (activeLineToggle && settings.activeLine !== undefined) {
+          activeLineToggle.checked = settings.activeLine;
+          editor.setHighlightActiveLine(settings.activeLine);
+        }
+      } catch (e) {
+        console.error("Session active line highlight restore error:", e);
+      }
+      
+      // Otomatik Tamamlama
+      try {
+        const autocompleteToggle = document.getElementById("toggle-autocomplete");
+        if (autocompleteToggle && settings.autocomplete !== undefined) {
+          autocompleteToggle.checked = settings.autocomplete;
+          editor.setOptions({
+            enableBasicAutocompletion: settings.autocomplete,
+            enableLiveAutocompletion: settings.autocomplete
+          });
+        }
+      } catch (e) {
+        console.error("Session autocomplete restore error:", e);
+      }
+      
+      // Son Satırdan Kaydırma
+      try {
+        const scrollPastEndToggle = document.getElementById("toggle-scroll-past-end");
+        if (scrollPastEndToggle && settings.scrollPastEnd !== undefined) {
+          scrollPastEndToggle.checked = settings.scrollPastEnd;
+          editor.setOption("scrollPastEnd", settings.scrollPastEnd);
+        }
+      } catch (e) {
+        console.error("Session scroll past end restore error:", e);
+      }
+      
+      // Otomatik Çalıştır
+      try {
+        const autorunToggle = document.getElementById("toggle-autorun");
+        if (autorunToggle && settings.autorun !== undefined) {
+          autorunToggle.checked = settings.autorun;
+        }
+      } catch (e) {
+        console.error("Session autorun restore error:", e);
+      }
+
+      // AI Sihirbazı Yardımcısı
+      try {
+        const aiWizardToggle = document.getElementById("toggle-ai-wizard");
+        const aiWizardWidget = document.getElementById("ai-wizard-widget");
+        if (aiWizardToggle && settings.aiWizard !== undefined) {
+          aiWizardToggle.checked = settings.aiWizard;
+          if (aiWizardWidget) {
+            if (settings.aiWizard) {
+              aiWizardWidget.style.display = "flex";
+            } else {
+              aiWizardWidget.style.display = "none";
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Session aiWizard restore error:", e);
+      }
+    }
+    
+    // 4. Aktif dosyaya geçiş yap
+    if (sessionData.currentActiveTabId) {
+      if (openTabs.some(t => t.id === sessionData.currentActiveTabId)) {
+        switchFileTab(sessionData.currentActiveTabId);
+      } else if (openTabs.length > 0) {
+        switchFileTab(openTabs[0].id);
+      } else {
+        showWelcomeScreen();
+      }
+    } else if (sessionData.currentActiveFile) {
+      if (openTabs.some(t => t.id === sessionData.currentActiveFile)) {
+        switchFileTab(sessionData.currentActiveFile);
+      } else if (openTabs.length > 0) {
+        switchFileTab(openTabs[0].id);
+      } else {
+        showWelcomeScreen();
+      }
+    } else {
+      showWelcomeScreen();
+    }
+    
+    return true;
+  } catch(e) {
+    console.error("Session load error:", e);
+    return false;
+  }
+}
 
 // Editörün başlangıç değerini boş geçelim (Hafıza state'ine göre yüklenecek)
 editor.setValue("", -1);
@@ -270,8 +825,9 @@ editor.setValue("", -1);
 // Düzenlemeleri gerçek zamanlı olarak hafızada (state) sakla
 let autoRunTimeout;
 editor.on("change", function () {
-  if (currentActiveFile) {
-    filesState[currentActiveFile] = editor.getValue();
+  if (currentActiveTabId) {
+    filesState[currentActiveTabId] = editor.getValue();
+    saveEditorSessionState(); // Düzenlemeleri tarayıcı hafızasına kaydet
 
     // Otomatik Çalıştır (Auto-Run) kontrolü (600ms gecikmeli)
     const autoRunToggle = document.getElementById("toggle-autorun");
@@ -428,65 +984,96 @@ document.getElementById("mode-select").addEventListener("change", function (e) {
 
 // Çoklu Sekmeli Dosya Geçiş Fonksiyonu
 // Çoklu Sekmeli Dosya Geçiş Fonksiyonu
-function switchFileTab(fileKey) {
-  if (!fileKey) return;
-  currentActiveFile = fileKey;
+function switchFileTab(tabId) {
+  if (!tabId) return;
+
+  const tab = openTabs.find(t => t.id === tabId);
+  if (!tab) return;
+
+  // Önceki aktif sekmenin içeriğini kaydet (eğer varsa)
+  if (currentActiveTabId && filesState[currentActiveTabId] !== undefined) {
+    filesState[currentActiveTabId] = editor.getValue();
+  }
+
+  currentActiveTabId = tabId;
+  currentActiveFile = tab.fileType; // Derleyici/Çalıştırıcı için dil türünü belirle
+
+  if (tab.fileType === "newtab") {
+    currentActiveFile = null;
+
+    // Arayüzdeki dropdown'ı senkronize et
+    document.getElementById("mode-select").value = "";
+
+    // Tab başlık stillerini güncelle (sadece dosya sekmeleri arasında)
+    document.querySelectorAll(".file-tabs .tab[data-file]").forEach(tabEl => {
+      if (tabEl.getAttribute("data-file") === tabId) {
+        tabEl.classList.add("active");
+      } else {
+        tabEl.classList.remove("active");
+      }
+    });
+
+    // Hoşgeldiniz ekranını aktif et, editör alanını gizle
+    document.getElementById("welcome-screen").classList.add("active");
+    document.getElementById("editor-container").classList.remove("active");
+
+    // Önizleme sekmelerini gizle
+    const previewSeparator = document.getElementById("preview-tab-separator");
+    const previewTabBtn = document.getElementById("tab-preview-btn");
+    if (previewSeparator) previewSeparator.style.display = "none";
+    if (previewTabBtn) previewTabBtn.style.display = "none";
+
+    document.getElementById("status-lang").innerText = "Yeni Sekme";
+    saveEditorSessionState();
+    return;
+  }
 
   // Arayüzdeki dropdown'ı senkronize et
-  document.getElementById("mode-select").value = fileKey;
+  document.getElementById("mode-select").value = tab.fileType;
 
   // Ace editör modunu ve tab dosya ismini güncelle
-  let mode = fileKey;
-  let filename = "script.js";
-  switch (fileKey) {
-    case 'javascript': mode = 'javascript'; filename = 'script.js'; break;
-    case 'html': mode = 'html'; filename = 'index.html'; break;
-    case 'css': mode = 'css'; filename = 'style.css'; break;
-    case 'python': mode = 'python'; filename = 'main.py'; break;
-    case 'json': mode = 'json'; filename = 'package.json'; break;
-    case 'sql': mode = 'sql'; filename = 'queries.sql'; break;
-    case 'pascal': mode = 'trobject'; filename = 'mainCode.tro'; break;
-  }
-
-  // Gizli olan dosya sekmesini görünür kıl
-  const tabEl = document.querySelector(`.file-tabs .tab[data-file="${fileKey}"]`);
-  if (tabEl) {
-    tabEl.style.display = "flex";
-  }
+  let aceMode = tab.fileType;
+  if (tab.fileType === 'pascal') aceMode = 'trobject';
 
   // Önizleme sekmelerini görünür yap
-  document.getElementById("preview-tab-separator").style.display = "flex";
-  document.getElementById("tab-preview-btn").style.display = "flex";
+  const previewSeparator = document.getElementById("preview-tab-separator");
+  const previewTabBtn = document.getElementById("tab-preview-btn");
+  if (previewSeparator) previewSeparator.style.display = "flex";
+  if (previewTabBtn) previewTabBtn.style.display = "flex";
 
   // Hoşgeldiniz ekranını gizle, editör alanını aktif et
   document.getElementById("welcome-screen").classList.remove("active");
   document.getElementById("editor-container").classList.add("active");
 
-  editor.session.setMode("ace/mode/" + mode);
+  editor.session.setMode("ace/mode/" + aceMode, function() {
+    // Kod içeriğini hafızadan (filesState) yükle
+    editor.setValue(filesState[tabId] !== undefined ? filesState[tabId] : "", -1);
+    if (editor.session.bgTokenizer) {
+      editor.session.bgTokenizer.start(0);
+    }
+  });
 
-  const dropdownOpt = document.querySelector(`#mode-select option[value="${fileKey}"]`);
-  document.getElementById("status-lang").innerText = `Dil: ${dropdownOpt ? dropdownOpt.text : fileKey}`;
-
-  // Kod içeriğini hafızadan (filesState) yükle
-  editor.setValue(filesState[fileKey], -1);
+  const dropdownOpt = document.querySelector(`#mode-select option[value="${tab.fileType}"]`);
+  document.getElementById("status-lang").innerText = `Dil: ${dropdownOpt ? dropdownOpt.text : tab.fileType}`;
 
   // Tab başlık stillerini güncelle (sadece dosya sekmeleri arasında)
-  document.querySelectorAll(".file-tabs .tab[data-file]").forEach(tab => {
-    if (tab.getAttribute("data-file") === fileKey) {
-      tab.classList.add("active");
+  document.querySelectorAll(".file-tabs .tab[data-file]").forEach(tabEl => {
+    if (tabEl.getAttribute("data-file") === tabId) {
+      tabEl.classList.add("active");
     } else {
-      tab.classList.remove("active");
+      tabEl.classList.remove("active");
     }
   });
 
   // Eğer split modunda değilsek editör görünümünü aktif et, önizleme sekmesinin active sınıfını kaldır
   if (!isSplitMode) {
-    document.getElementById("tab-preview-btn").classList.remove("active");
+    const previewTabBtn = document.getElementById("tab-preview-btn");
+    if (previewTabBtn) previewTabBtn.classList.remove("active");
     document.getElementById("editor-container").classList.add("active");
     document.getElementById("preview-container").classList.remove("active");
   }
 
-  updateTemplateLibraryFilter(fileKey);
+  updateTemplateLibraryFilter(tab.fileType);
   if (typeof renderDocs === "function") {
     renderDocs(document.getElementById("docs-search-input") ? document.getElementById("docs-search-input").value : "");
   }
@@ -496,7 +1083,8 @@ function switchFileTab(fileKey) {
     btn.classList.add("show-btn");
   });
 
-  logToConsole(`Dosya açıldı/değiştirildi: ${filename} (Mod: ace/mode/${mode})`, "api-call");
+  logToConsole(`Dosya açıldı/değiştirildi: ${tab.label} (Mod: ace/mode/${aceMode})`, "api-call");
+  saveEditorSessionState(); // Oturum durumunu tarayıcı hafızasına kaydet
 }
 
 // Klavye Düzeni (Vim / Emacs / Default)
@@ -610,14 +1198,26 @@ editor.session.on("change", updateStatusBar);
 
 // Editörü Temizle
 document.getElementById("btn-clear").addEventListener("click", function () {
-  if (!currentActiveFile) return;
+  if (!currentActiveFile) {
+    if (confirm("Tüm editör oturumunu ve dosyaları varsayılan ayarlara sıfırlamak istiyor musunuz?")) {
+      localStorage.removeItem("clomosy_ide_session");
+      location.reload();
+    }
+    return;
+  }
   editor.setValue("", -1);
   logToConsole("Editör temizlendi.", "system-msg");
 });
 
 // Kodu Sıfırla
 document.getElementById("btn-reset").addEventListener("click", function () {
-  if (!currentActiveFile) return;
+  if (!currentActiveFile) {
+    if (confirm("Tüm editör oturumunu ve dosyaları varsayılan ayarlara sıfırlamak istiyor musunuz?")) {
+      localStorage.removeItem("clomosy_ide_session");
+      location.reload();
+    }
+    return;
+  }
   const currentLang = document.getElementById("mode-select").value;
   if (codeTemplates[currentLang]) {
     editor.setValue(codeTemplates[currentLang], -1);
@@ -800,7 +1400,8 @@ function switchToPreviewTab() {
   });
 
   // Önizleme sekmesini aktif et
-  document.getElementById("tab-preview-btn").classList.add("active");
+  const previewTabBtn = document.getElementById("tab-preview-btn");
+  if (previewTabBtn) previewTabBtn.classList.add("active");
 
   // İçerikleri değiştir
   document.getElementById("editor-container").classList.remove("active");
@@ -857,74 +1458,87 @@ document.getElementById("btn-split").addEventListener("click", function () {
   }
 });
 
-// Sekme Tıklama Dinleyicileri
-document.querySelectorAll(".file-tabs .tab").forEach(tab => {
-  tab.addEventListener("click", function () {
-    const fileTarget = this.getAttribute("data-file");
-    const tabTarget = this.getAttribute("data-tab");
-
-    if (fileTarget) {
-      // Bir dosya sekmesine tıklandı
-      switchFileTab(fileTarget);
-      editor.resize();
-      editor.focus();
-    } else if (tabTarget === "preview-view") {
-      // Canlı Önizleme sekmesine tıklandı
-      switchToPreviewTab();
+window.openFileFromWelcome = function (fileType) {
+  // Eğer şu an aktif sekme bir "Yeni Sekme" ise, bu sekmeyi dönüştür!
+  const activeTab = openTabs.find(t => t.id === currentActiveTabId);
+  if (activeTab && activeTab.fileType === "newtab") {
+    let baseName = "untitled";
+    let ext = "js";
+    switch (fileType) {
+      case 'javascript': baseName = "script"; ext = "js"; break;
+      case 'html': baseName = "index"; ext = "html"; break;
+      case 'css': baseName = "style"; ext = "css"; break;
+      case 'python': baseName = "main"; ext = "py"; break;
+      case 'json': baseName = "package"; ext = "json"; break;
+      case 'sql': baseName = "queries"; ext = "sql"; break;
+      case 'pascal': baseName = "mainCode"; ext = "tro"; break;
     }
-  });
-});
 
-// Hoş Geldiniz ekranındaki butonlar için global dosya açma fonksiyonu
-window.openFileFromWelcome = function (fileKey) {
-  switchFileTab(fileKey);
+    let label = `${baseName}.${ext}`;
+    let suffix = 0;
+    while (openTabs.some(t => t.label === label)) {
+      suffix++;
+      label = `${baseName}(${suffix}).${ext}`;
+    }
+
+    activeTab.fileType = fileType;
+    activeTab.label = label;
+    
+    // filesState'e varsayılan kod içeriğini enjekte et
+    filesState[activeTab.id] = codeTemplates[fileType] || "";
+
+    // Sekmeleri yeniden çizdir ve sekmeyi aç
+    renderTabs();
+    switchFileTab(activeTab.id);
+  } else {
+    const existingTab = openTabs.find(t => t.fileType === fileType);
+    if (existingTab) {
+      switchFileTab(existingTab.id);
+    } else {
+      addNewTab(fileType);
+    }
+  }
 };
 
-// Tab Kapatma Olaylarını Dinle
 function bindTabCloseEvents() {
   document.querySelectorAll(".tab-close-btn").forEach(closeBtn => {
     closeBtn.onclick = function (e) {
       e.stopPropagation(); // Sekmenin tıklanma olayını engeller (dosya geçişi olmasın)
 
       const tabElement = this.parentElement;
-      const fileKey = tabElement.getAttribute("data-file");
+      const tabId = tabElement.getAttribute("data-file");
 
-      if (fileKey) {
-        // Dosya sekmesini gizle
-        tabElement.style.display = "none";
+      if (tabId) {
+        // Sekmeyi openTabs listesinden kaldır
+        openTabs = openTabs.filter(t => t.id !== tabId);
 
-        // Eğer kapatılan sekme aktif dosyaysa, açık olan başka bir sekme seç
-        if (currentActiveFile === fileKey) {
-          const nextActiveTab = findNextAvailableFileTab();
-          if (nextActiveTab) {
-            switchFileTab(nextActiveTab);
+        // Eğer kapatılan sekme aktif dosyaysa, başka bir sekmeye geç
+        if (currentActiveTabId === tabId) {
+          if (openTabs.length > 0) {
+            switchFileTab(openTabs[0].id);
           } else {
-            // Açık dosya kalmadı, boş ekrana/hoşgeldiniz ekranına dön
+            // Açık dosya kalmadı, sekmeleri temizle ve boş ekrana/hoşgeldiniz ekranına dön
+            renderTabs();
             showWelcomeScreen();
           }
         } else {
-          // Kapatılan sekme aktif değilse, sadece kalan sekmeleri kontrol et (hepsi kapandıysa hoşgeldiniz göster)
-          const nextActiveTab = findNextAvailableFileTab();
-          if (!nextActiveTab) {
+          // Kapatılan sekme aktif değilse, sekmeleri yeniden çizdir
+          if (openTabs.length === 0) {
+            renderTabs();
             showWelcomeScreen();
+          } else {
+            renderTabs();
           }
         }
+        saveEditorSessionState(); // Sekme kapatıldığında oturumu kaydet
       }
     };
   });
 }
 
-function findNextAvailableFileTab() {
-  const visibleTabs = Array.from(document.querySelectorAll(".file-tabs .tab[data-file]"))
-    .filter(tab => tab.style.display === "flex");
-  if (visibleTabs.length > 0) {
-    return visibleTabs[0].getAttribute("data-file");
-  }
-  return null;
-}
-
 function showWelcomeScreen() {
   currentActiveFile = null;
+  currentActiveTabId = null;
   document.getElementById("mode-select").value = ""; // Seçiciyi sıfırla
 
   // Tüm içerikleri gizle, hoşgeldiniz ekranını aktif et
@@ -937,8 +1551,10 @@ function showWelcomeScreen() {
   });
 
   // Önizleme sekmelerini gizle
-  document.getElementById("tab-preview-btn").style.display = "none";
-  document.getElementById("preview-tab-separator").style.display = "none";
+  const previewTabBtn = document.getElementById("tab-preview-btn");
+  const previewSeparator = document.getElementById("preview-tab-separator");
+  if (previewTabBtn) previewTabBtn.style.display = "none";
+  if (previewSeparator) previewSeparator.style.display = "none";
 
   // Durum çubuğunu temizle
   document.getElementById("status-lang").innerText = "Dosya Açık Değil";
@@ -1862,10 +2478,7 @@ function runLiveCode() {
                 if (this.type === "list") {
                   const item = document.createElement("div");
                   item.className = "cl-list-item";
-                  item.innerHTML = `
-                    <div class="cl-list-item-title">${title}</div>
-                    <div class="cl-list-item-sub">${subtitle}</div>
-                  `;
+                  item.innerHTML = '<div class="cl-list-item-title">' + title + '</div><div class="cl-list-item-sub">' + subtitle + '</div>';
                   item.addEventListener("click", () => selectListItem(title, subtitle));
                   this.domElement.appendChild(item);
                 }
@@ -3780,12 +4393,256 @@ const clomosyCompleter = {
   }
 };
 
+// Dynamic Custom Completer support (matching betacms_1_2_17.js API)
+let customCompletions = [];
+
+window.SetCustomAutocomplete = function(data) {
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch(e) {}
+  }
+  
+  if (Array.isArray(data)) {
+    customCompletions = data.map(item => ({
+      name: item.name || item.caption || item.value,
+      value: item.value || item.caption,
+      score: item.score || 1000,
+      meta: item.meta || "Custom Completion"
+    }));
+  } else if (data && typeof data === "object" && typeof data.GetCount === "function") {
+    customCompletions = [];
+    try {
+      const count = data.GetCount();
+      for (let i = 0; i < count; i++) {
+        const item = data.GetItem$1(i);
+        if (item) {
+          customCompletions.push({
+            name: item.FName || item.FCaption || item.FValue || "",
+            value: item.FValue || item.FCaption || "",
+            score: item.FScore || 1000,
+            meta: item.FMeta || "Custom Completion"
+          });
+        }
+      }
+    } catch (err) {}
+  }
+  logToConsole(`[Autocomplete] ${customCompletions.length} adet özel kelime tamamlayıcıya eklendi.`, "system-msg");
+};
+
+window.InitializeKeyWords = window.SetCustomAutocomplete;
+
+window.DisableLocalKeywords = function() {
+  logToConsole("[Autocomplete] Yerel kelimeler devre dışı bırakıldı.", "system-msg");
+};
+window.PreloadPascalKeywords = function() {
+  logToConsole("[Autocomplete] Pascal kelimeleri ön yüklendi.", "system-msg");
+};
+window.RemoveCustomAutocompleter = function() {
+  customCompletions = [];
+};
+window.RemovePascalKeywords = function() {};
+
+// Expose on editor instance too (matching TclEditor methods in betacms_1_2_17.js)
+editor.SetAutocompletion = function(mode) {
+  if (mode === 0 || mode === "saNone") {
+    editor.setOptions({ enableBasicAutocompletion: false, enableLiveAutocompletion: false });
+  } else if (mode === 1 || mode === "saBasic") {
+    editor.setOptions({ enableBasicAutocompletion: true, enableLiveAutocompletion: false });
+  } else {
+    editor.setOptions({ enableBasicAutocompletion: true, enableLiveAutocompletion: true });
+  }
+};
+
+editor.SetWordWrap = function(mode) {
+  if (mode === 0 || mode === "swNone") {
+    editor.session.setUseWrapMode(false);
+  } else {
+    editor.session.setUseWrapMode(true);
+    editor.session.setWrapLimitRange();
+  }
+};
+
+editor.SetSoftTabs = function(useSoft) {
+  editor.session.setOption("useSoftTabs", !!useSoft);
+};
+
+editor.SetFixedGutterWidth = function(enabled) {
+  editor.renderer.setOption("fixedWidthGutter", !!enabled);
+};
+
+editor.SetShowLineNumbers = function(show) {
+  editor.renderer.setOption("showLineNumbers", !!show);
+};
+
+editor.SetShowFoldWidgets = function(show) {
+  editor.setShowFoldWidgets(!!show);
+};
+
+editor.SetFadeFoldWidgets = function(fade) {
+  editor.setFadeFoldWidgets(!!fade);
+};
+
+editor.SetTextDirection = function(dir) {
+  editor.setOption("rtl", dir === 1 || dir === "stdRightToLeft");
+};
+
+editor.SetFontSize = function(size) {
+  editor.setFontSize(typeof size === "number" ? size + "px" : size);
+};
+
+editor.GetCaretPosition = function() {
+  const pos = editor.getCursorPosition();
+  return {
+    x: pos.column,
+    y: pos.row,
+    $assign: function(other) {
+      this.x = other.x;
+      this.y = other.y;
+      return this;
+    }
+  };
+};
+
+editor.SetCaretPosition = function(pt) {
+  if (pt) {
+    editor.selection.moveTo(pt.y, pt.x);
+  }
+};
+
+editor.GetText = function(t, e) {
+  if (t && typeof t.set === "function") {
+    t.set(editor.getValue());
+  }
+  return editor.getValue();
+};
+
+editor.SetText = function(val) {
+  editor.setValue(val || "", -1);
+};
+
+editor.GetLines = function() {
+  const lines = editor.session.getDocument().getAllLines();
+  return {
+    lines: lines,
+    GetCount: function() { return this.lines.length; },
+    GetItem$1: function(i) { return this.lines[i] || ""; },
+    Assign: function(other) {
+      if (other && typeof other.GetCount === "function") {
+        const count = other.GetCount();
+        this.lines = [];
+        for (let i = 0; i < count; i++) {
+          this.lines.push(other.GetItem$1(i));
+        }
+      }
+    }
+  };
+};
+
+editor.SetLines = function(linesList) {
+  if (linesList && typeof linesList.GetCount === "function") {
+    const count = linesList.GetCount();
+    const arr = [];
+    for (let i = 0; i < count; i++) {
+      arr.push(linesList.GetItem$1(i));
+    }
+    editor.setValue(arr.join("\n"), -1);
+  } else if (Array.isArray(linesList)) {
+    editor.setValue(linesList.join("\n"), -1);
+  }
+};
+
+editor.InitializeKeyWords = window.SetCustomAutocomplete;
+editor.PreloadPascalKeywords = window.PreloadPascalKeywords;
+editor.DisableLocalKeywords = window.DisableLocalKeywords;
+editor.RemoveCustomAutocompleter = window.RemoveCustomAutocompleter;
+editor.RemovePascalKeywords = window.RemovePascalKeywords;
+
 // Ace dil araçlarına completer'ı kaydet
 const langTools = ace.require("ace/ext/language_tools");
 if (langTools) {
   langTools.addCompleter(clomosyCompleter);
   logToConsole("Clomosy (TRObject) özel otomatik tamamlama listesi başarıyla editöre eklendi.", "system-msg");
 }
+
+// Custom autocomplete list for standard Pascal keywords
+const pascalKeywordsList = ["absolute","abstract","all","and","and_then","array","as","asm","attribute","begin","bindable","case","class","const","constructor","destructor","div","do","else","end","except","export","exports","external","far","file","finalization","finally","for","forward","function","goto","if","implementation","import","in","inherited","initialization","interface","interrupt","is","label","library","mod","module","name","near","nil","not","object","of","only","operator","or","or_else","otherwise","packed","pow","private","procedure","program","property","protected","public","published","qualified","record","repeat","resident","restricted","segment","set","shl","shr","then","to","try","type","unit","until","uses","value","var","view","virtual","while","with","xor"];
+const pascalCompletions = pascalKeywordsList.map(kw => ({
+  name: kw,
+  value: kw,
+  score: 800,
+  meta: "keyword"
+}));
+
+// Modify getCompletions to merge all lists
+const originalGetCompletions = clomosyCompleter.getCompletions;
+clomosyCompleter.getCompletions = function(editor, session, pos, prefix, callback) {
+  if (session.$modeId !== "ace/mode/pascal" && session.$modeId !== "ace/mode/trobject") {
+    callback(null, []);
+    return;
+  }
+  originalGetCompletions(editor, session, pos, prefix, function(err, results) {
+    if (err) return callback(err);
+    const allCompletions = (results || []).concat(pascalCompletions).concat(customCompletions);
+    callback(null, allCompletions);
+  });
+};
+
+// --- Clomosy Token Tooltip (API Hover Documentation) ---
+const tooltipEl = document.createElement("div");
+tooltipEl.className = "clomosy-token-tooltip";
+document.body.appendChild(tooltipEl);
+
+editor.on("mousemove", function (e) {
+  const pos = editor.renderer.screenToTextCoordinates(e.clientX, e.clientY);
+  const token = editor.session.getTokenAt(pos.row, pos.column);
+  
+  if (token && token.value && (editor.session.$modeId === "ace/mode/pascal" || editor.session.$modeId === "ace/mode/trobject")) {
+    const word = token.value.trim();
+    const docList = [
+      { name: "TclForm", desc: "Clomosy Mobil/Web Form nesnesi. Pencereleri oluşturmak ve bileşenleri barındırmak için kullanılır." },
+      { name: "TclProPanel", desc: "Profesyonel görsel panel katmanı. Arka plan rengi, kenarlıklar ve yuvarlatma desteği sunar." },
+      { name: "TclProLabel", desc: "Profesyonel etiket nesnesi. WordWrap (metin kaydırma) ve gelişmiş yazı tipi ayarları destekler." },
+      { name: "TClProButton", desc: "Profesyonel stil buton nesnesi. Yuvarlatılmış köşeler ve özel dolgu rengi atanabilir." },
+      { name: "TclEdit", desc: "Kullanıcıdan tek satırlı metin girdisi almak için kullanılan standart giriş kutusu." },
+      { name: "TclMemo", desc: "Kullanıcıdan çok satırlı metin veya not girdisi almak için kullanılan yazı alanı." },
+      { name: "TclImage", desc: "URL veya yerel dosya sisteminden görsel/resim yükleyip görüntüleyen bileşen." },
+      { name: "TclListView", desc: "Dinamik veri kümelerini liste şeklinde göstermek için kullanılan gelişmiş liste bileşeni." },
+      { name: "TclRest", desc: "RESTful HTTP istekleri (GET, POST, PUT, DELETE) göndermek ve yanıtları işlemek için istemci nesnesi." },
+      { name: "TclTimer", desc: "Belirli aralıklarla arka planda otomatik işler yürütmek için kullanılan sayaç bileşeni." },
+      { name: "TClHorzScrollBox", desc: "Yatay (horizontal) yönde kaydırılabilir içerik paneli." },
+      { name: "TclVertScrollBox", desc: "Dikey (vertical) yönde kaydırılabilir içerik paneli." },
+      { name: "TclMediaPlayer", desc: "Ses efektleri, müzik veya sesli rehberleri oynatmak için kullanılan medya oynatıcı." },
+      { name: "TclJSONQuery", desc: "JSON verilerini bellek içi bir veritabanı tablosu (Dataset) gibi sorgulamak için kullanılan sınıf." },
+      { name: "TClSQLiteQuery", desc: "Yerel SQLite veritabanı dosyaları üzerinde SQL komutları çalıştırıp okuyan sorgu nesnesi." },
+      { name: "TclSqlQuery", desc: "Uzak veritabanı sunucularında SQL komutları çalıştırmak için kullanılan genel sorgu nesnesi." },
+      
+      { name: "tbeOnClick", desc: "Bileşene tıklandığında (Click) tetiklenen olay sabiti." },
+      { name: "tbeOnItemClick", desc: "ListView nesnesinde bir satıra tıklandığında tetiklenen olay sabiti." },
+      { name: "tbeOnTimer", desc: "Zamanlayıcı (Timer) süresi her dolduğunda tetiklenen olay sabiti." },
+      
+      { name: "ShowMessage", desc: "Ekranda kullanıcının onaylaması gereken modal bir bilgi kutusu (Dialog) açar." },
+      { name: "DBSQLiteConnect", desc: "Yerel SQLite veritabanı bağlantısını başlatır. Dosya yoksa oluşturur." },
+      { name: "DBSQLiteQuery", desc: "Varsayılan yerel SQLite veritabanı sorgu çalıştırma referansı." },
+      { name: "DBSQLServerConnect", desc: "Uzak bir SQL Server (MSSQL) sunucusuna verilen host, port ve kimlik bilgileriyle bağlanır." },
+      { name: "DBSQLServerQuery", desc: "Varsayılan uzak SQL Server veritabanı sorgu çalıştırma referansı." },
+      { name: "ClDataSetFromJSON", desc: "Girilen JSON metin yapısını otomatik çözümleyerek TClJsonQuery dataset tablosuna dönüştürür." }
+    ];
+    
+    const found = docList.find(item => item.name.toLowerCase() === word.toLowerCase());
+    if (found) {
+      tooltipEl.innerHTML = `
+        <div class="tooltip-title">${found.name}</div>
+        <div class="tooltip-desc">${found.desc}</div>
+      `;
+      tooltipEl.style.left = (e.clientX + 15) + "px";
+      tooltipEl.style.top = (e.clientY + 15) + "px";
+      tooltipEl.style.display = "block";
+      return;
+    }
+  }
+  tooltipEl.style.display = "none";
+});
 
 // ----------------------------------------------------
 // Vim Modu Özel Komutları (:w yazıldığında derlesin)
@@ -3861,6 +4718,9 @@ document.querySelectorAll(".activity-btn").forEach(btn => {
     } else if (tabName === "docs") {
       titleText.innerText = "Doküman Kitaplığı";
       headerIcon.innerHTML = `<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>`;
+    } else if (tabName === "ai") {
+      titleText.innerText = "AI Kod Asistanı";
+      headerIcon.innerHTML = `<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" fill="currentColor"></path>`;
     } else {
       titleText.innerText = "API Sandbox";
       headerIcon.innerHTML = `<polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>`;
@@ -5169,6 +6029,49 @@ function updateTemplateLibraryFilter(fileKey) {
 }
 
 document.querySelectorAll(".btn-snippet").forEach(btn => {
+  btn.setAttribute("draggable", "true");
+
+  btn.addEventListener("dragstart", function (e) {
+    const snippetKey = this.getAttribute("data-snippet");
+    const code = templateSnippets[snippetKey];
+    if (code) {
+      e.dataTransfer.setData("text/plain", code);
+      e.dataTransfer.effectAllowed = "copy";
+      
+      // Sürükleme esnasında kötü görüntüyü engellemek için şık ve küçük bir kapsül tasarlıyoruz
+      const titleText = this.querySelector('span') ? this.querySelector('span').innerText : "Şablon";
+      const dragFeedback = document.createElement("div");
+      dragFeedback.style.position = "absolute";
+      dragFeedback.style.top = "-1000px";
+      dragFeedback.style.left = "-1000px";
+      dragFeedback.style.padding = "6px 12px";
+      dragFeedback.style.background = "#6366f1";
+      dragFeedback.style.color = "#ffffff";
+      dragFeedback.style.borderRadius = "20px";
+      dragFeedback.style.fontFamily = "system-ui, -apple-system, sans-serif";
+      dragFeedback.style.fontSize = "11px";
+      dragFeedback.style.fontWeight = "600";
+      dragFeedback.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.35)";
+      dragFeedback.style.pointerEvents = "none";
+      dragFeedback.style.whiteSpace = "nowrap";
+      dragFeedback.innerText = "📝 " + titleText;
+      document.body.appendChild(dragFeedback);
+      e.dataTransfer.setDragImage(dragFeedback, 15, 15);
+      setTimeout(() => dragFeedback.remove(), 0);
+      
+      // Kodu sürüklerken hedef sekmenin otomatik açılmasını sağla
+      if (snippetKey.startsWith("sql-")) {
+        switchFileTab("sql");
+      } else if (snippetKey.startsWith("web-")) {
+        switchFileTab("html");
+      } else if (snippetKey.startsWith("py-")) {
+        switchFileTab("python");
+      } else if (snippetKey.startsWith("pas-")) {
+        switchFileTab("pascal");
+      }
+    }
+  });
+
   btn.addEventListener("click", function () {
     const snippetKey = this.getAttribute("data-snippet");
     const code = templateSnippets[snippetKey];
@@ -5802,6 +6705,32 @@ function renderDocs(query = "") {
 function createDocCard(item) {
   const card = document.createElement("div");
   card.className = "doc-card";
+  card.setAttribute("draggable", "true");
+
+  card.addEventListener("dragstart", function (e) {
+    e.dataTransfer.setData("text/plain", item.code);
+    e.dataTransfer.effectAllowed = "copy";
+    
+    // Sürükleme esnasında kötü görüntüyü engellemek için şık ve küçük bir kapsül tasarlıyoruz
+    const dragFeedback = document.createElement("div");
+    dragFeedback.style.position = "absolute";
+    dragFeedback.style.top = "-1000px";
+    dragFeedback.style.left = "-1000px";
+    dragFeedback.style.padding = "6px 12px";
+    dragFeedback.style.background = "#6366f1";
+    dragFeedback.style.color = "#ffffff";
+    dragFeedback.style.borderRadius = "20px";
+    dragFeedback.style.fontFamily = "system-ui, -apple-system, sans-serif";
+    dragFeedback.style.fontSize = "11px";
+    dragFeedback.style.fontWeight = "600";
+    dragFeedback.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.35)";
+    dragFeedback.style.pointerEvents = "none";
+    dragFeedback.style.whiteSpace = "nowrap";
+    dragFeedback.innerText = "📝 " + item.name;
+    document.body.appendChild(dragFeedback);
+    e.dataTransfer.setDragImage(dragFeedback, 15, 15);
+    setTimeout(() => dragFeedback.remove(), 0);
+  });
 
   const escapedCode = item.code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const safeInjectCode = item.code.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$/g, "\\$");
@@ -6157,7 +7086,7 @@ renderDocs();
         if (/^(begin)\b/i.test(trimmed)) {
           annotations.push({
             row: i,
-            column: line.indexOf('begin'),
+            column: Math.max(0, line.toLowerCase().indexOf('begin')),
             text: "Clomosy bloklarında 'begin' yerine '{' kullanılması önerilir.",
             type: "info"
           });
@@ -6165,7 +7094,7 @@ renderDocs();
         if (/^(end)\b/i.test(trimmed)) {
           annotations.push({
             row: i,
-            column: line.indexOf('end'),
+            column: Math.max(0, line.toLowerCase().indexOf('end')),
             text: "Clomosy bloklarında 'end' yerine '}' kullanılması önerilir.",
             type: "info"
           });
@@ -6176,4 +7105,586 @@ renderDocs();
     }, 500); // Kullanıcı yazmayı bıraktıktan 500ms sonra çalıştır (debounce)
   });
 })();
-  
+
+// --- Oturum Değişikliklerini Dinleyen ve Yükleyen Hooklar ---
+const settingsInputIds = [
+  "theme-select", "toggle-interface-theme", "keybindings-select", "tab-size-select",
+  "font-size-slider", "line-height-slider", "toggle-gutter", "toggle-wrap",
+  "toggle-margin", "toggle-readonly", "toggle-active-line", "toggle-autocomplete",
+  "toggle-scroll-past-end", "toggle-autorun", "toggle-ai-wizard"
+];
+settingsInputIds.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener("change", saveEditorSessionState);
+    if (el.type === "range" || el.tagName === "INPUT") {
+      el.addEventListener("input", saveEditorSessionState);
+    }
+  }
+});
+
+// Sistem ve Yardımcı Buton Olayları (Önbellek temizleme ve kısayol kılavuzu)
+function initSystemAndHelperEvents() {
+  const clearCacheBtn = document.getElementById("btn-clear-cache");
+  const shortcutsBtn = document.getElementById("btn-shortcuts-guide");
+  const shortcutsModal = document.getElementById("shortcuts-guide-modal");
+  const closeShortcutsBtn = document.getElementById("btn-close-shortcuts-modal");
+
+  if (clearCacheBtn) {
+    clearCacheBtn.addEventListener("click", function() {
+      const confirmClear = confirm("Editör önbelleğini (açık sekmeler, son düzenlemeler ve ayarlar) temizlemek istediğinizden emin misiniz?");
+      if (confirmClear) {
+        localStorage.removeItem("clomosy_ide_session");
+        alert("Önbellek başarıyla temizlendi. Sayfa yeniden yüklenecektir.");
+        location.reload();
+      }
+    });
+  }
+
+  if (shortcutsBtn && shortcutsModal) {
+    shortcutsBtn.addEventListener("click", function() {
+      shortcutsModal.classList.remove("hidden");
+    });
+  }
+
+  if (closeShortcutsBtn && shortcutsModal) {
+    closeShortcutsBtn.addEventListener("click", function() {
+      shortcutsModal.classList.add("hidden");
+    });
+  }
+
+  if (shortcutsModal) {
+    shortcutsModal.addEventListener("click", function(e) {
+      if (e.target === shortcutsModal) {
+        shortcutsModal.classList.add("hidden");
+      }
+    });
+  }
+}
+
+// Sayfa ilk yüklendiğinde hafızayı geri yükle ve olayları başlat
+function initAppOnLoad() {
+  initAddTabEvents();
+  initSystemAndHelperEvents();
+  if (!loadEditorSessionState()) {
+    renderTabs();
+    showWelcomeScreen();
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initAppOnLoad);
+} else {
+  initAppOnLoad();
+}
+
+// =======================================================
+// Yapay Zeka Kod Asistanı Modülü (AI Assistant Module) - Sihirbaz Pop-Up Entegrasyonu
+// =======================================================
+(function () {
+  const mascot = document.getElementById("ai-wizard-mascot");
+  const bubble = document.getElementById("ai-wizard-bubble");
+  const popup = document.getElementById("ai-wizard-popup");
+  const closePopupBtn = document.getElementById("btn-close-ai-popup");
+
+  const keyView = document.getElementById("ai-popup-key-view");
+  const chatView = document.getElementById("ai-popup-chat-view");
+  const apiKeyInput = document.getElementById("ai-popup-api-key");
+  const saveKeyBtn = document.getElementById("btn-save-popup-key");
+  const changeKeyBtn = document.getElementById("btn-change-popup-key");
+  const keyStatus = document.getElementById("ai-popup-key-status");
+
+  const chatMessages = document.getElementById("ai-chat-messages");
+  const chatInput = document.getElementById("ai-chat-input");
+  const sendMsgBtn = document.getElementById("btn-send-ai-msg");
+
+  const presetExplain = document.getElementById("btn-ai-explain");
+  const presetFindBugs = document.getElementById("btn-ai-findbugs");
+  const presetOptimize = document.getElementById("btn-ai-optimize");
+  const presetDocHelp = document.getElementById("btn-ai-dochelp");
+
+  // Sihirbaz Konuşma Cümleleri
+  const wizardPhrases = [
+    "Sihirli bir Clomosy projesi oluşturmaya hazır mısın? 🔮",
+    "Kodunun analiz edilmesini istersen bana tıkla! 💫",
+    "TClProButton ve TClProLabel bileşenlerini çok severim! 🎨",
+    "Hataları bulup yok etmek benim uzmanlık alanım. 🐛",
+    "Gemini gücüyle kodlarınıza sihir katıyorum! ✨",
+    "SQLite sorgularını optimize edebilirim! 💾",
+    "Mobil tasarım yaparken takıldığın bir şey var mı? 📱",
+    "Koduna açıklama eklemek için 'Kodu Açıkla' butonumu dene! 📚",
+    "Canlı çağrı (Sandbox) sekmesini inceledin mi? 📡"
+  ];
+
+  function startWizardSpeech() {
+    // Sayfa ilk açıldığında hemen selam ver
+    setTimeout(() => {
+      if (popup && !popup.classList.contains("hidden")) return;
+      bubble.innerText = "Merhaba! Clomosy kodlarında yardıma ihtiyacın var mı? 🔮";
+      bubble.classList.add("visible");
+      setTimeout(() => {
+        bubble.classList.remove("visible");
+      }, 5500);
+    }, 1000);
+
+    setInterval(() => {
+      // Eğer sohbet penceresi açıksa konuşma balonunu gösterme
+      if (popup && !popup.classList.contains("hidden")) return;
+
+      const randomPhrase = wizardPhrases[Math.floor(Math.random() * wizardPhrases.length)];
+      bubble.innerText = randomPhrase;
+      bubble.classList.add("visible");
+
+      setTimeout(() => {
+        bubble.classList.remove("visible");
+      }, 5500);
+    }, 15000);
+  }
+
+  // API Anahtarı Durumunu Güncelle
+  function updateKeyStatus() {
+    const savedKey = localStorage.getItem("clomosy_gemini_api_key");
+    if (savedKey) {
+      keyStatus.innerText = "API Key: Aktif";
+      keyStatus.style.color = "#10b981";
+    } else {
+      keyStatus.innerText = "API Key: Girilmedi";
+      keyStatus.style.color = "#f59e0b";
+    }
+  }
+
+  // Popup Görünümlerini Yönet
+  function togglePopupView() {
+    const savedKey = localStorage.getItem("clomosy_gemini_api_key");
+    if (savedKey) {
+      keyView.classList.add("hidden");
+      chatView.classList.remove("hidden");
+    } else {
+      keyView.classList.remove("hidden");
+      chatView.classList.add("hidden");
+    }
+  }
+
+  // Mascot Tıklama Event'i
+  const toggleAiWizard = document.getElementById("toggle-ai-wizard");
+  const aiWizardWidget = document.getElementById("ai-wizard-widget");
+  const hideMascotBtn = document.getElementById("btn-hide-mascot");
+
+  if (mascot) {
+    mascot.addEventListener("click", function () {
+      bubble.classList.remove("visible");
+      popup.classList.toggle("hidden");
+      if (!popup.classList.contains("hidden")) {
+        togglePopupView();
+        updateKeyStatus();
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+    });
+  }
+
+  // Sihirbazı Gizle Fonksiyonu (Veda Mesajlı)
+  let isHiding = false;
+  function hideMascotWithFarewell() {
+    if (isHiding) return;
+    isHiding = true;
+
+    // Chat penceresini hemen kapat
+    if (popup) popup.classList.add("hidden");
+
+    // Veda mesajını göster
+    if (bubble) {
+      bubble.innerText = "Beni ne zaman istersen Ayarlar & Görünüm altındaki Arayüz Ayarları kısmından bulabilirsin! 🔮";
+      bubble.classList.add("visible");
+    }
+
+    // Mesajın okunması için 3.5 saniye bekle ve sonra tamamen gizle
+    setTimeout(() => {
+      if (aiWizardWidget) aiWizardWidget.style.display = "none";
+      if (bubble) bubble.classList.remove("visible");
+      if (toggleAiWizard) toggleAiWizard.checked = false;
+      saveEditorSessionState();
+      isHiding = false;
+    }, 3600);
+  }
+
+  // Sihirbazı Gizle (x) Butonu
+  if (hideMascotBtn) {
+    hideMascotBtn.addEventListener("click", function (e) {
+      e.stopPropagation(); // Tıklamanın mascot div'ine yayılıp popup açmasını önler
+      hideMascotWithFarewell();
+    });
+  }
+
+  // Ayarlar Panelindeki Toggle Switch Değişimi
+  if (toggleAiWizard) {
+    toggleAiWizard.addEventListener("change", function () {
+      if (aiWizardWidget) {
+        if (this.checked) {
+          aiWizardWidget.style.display = "flex";
+          // Geri dönüş selamı
+          if (bubble) {
+            bubble.innerText = "Sihirbaz geri döndü! Size yardım etmek için sabırsızlanıyorum. 🔮";
+            bubble.classList.add("visible");
+            setTimeout(() => {
+              bubble.classList.remove("visible");
+            }, 4000);
+          }
+          saveEditorSessionState();
+        } else {
+          // Switch kapatıldığında veda mesajını oynat
+          this.checked = true; // Veda süresince switch aktif kalsın
+          hideMascotWithFarewell();
+        }
+      }
+    });
+  }
+
+  // Kapat Butonu
+  if (closePopupBtn) {
+    closePopupBtn.addEventListener("click", function () {
+      popup.classList.add("hidden");
+    });
+  }
+
+  // API Anahtarını Kaydetme
+  if (saveKeyBtn) {
+    saveKeyBtn.addEventListener("click", function () {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem("clomosy_gemini_api_key", key);
+        apiKeyInput.value = "";
+        togglePopupView();
+        updateKeyStatus();
+        logToConsole("Gemini API Anahtarı başarıyla kaydedildi.", "system-msg");
+        appendMessage("Sistem", "API anahtarınız başarıyla tanımlandı! Artık sohbet edebilirsiniz. 🔮", "bot");
+      }
+    });
+  }
+
+  // API Anahtarını Değiştirme
+  if (changeKeyBtn) {
+    changeKeyBtn.addEventListener("click", function () {
+      const savedKey = localStorage.getItem("clomosy_gemini_api_key");
+      apiKeyInput.value = savedKey || "";
+      chatView.classList.add("hidden");
+      keyView.classList.remove("hidden");
+    });
+  }
+
+  // Mesaj Ekleme Yardımcısı
+  function appendMessage(sender, text, type) {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `ai-msg ${type}`;
+    
+    const senderDiv = document.createElement("div");
+    senderDiv.className = "msg-sender";
+    senderDiv.innerText = sender;
+    msgDiv.appendChild(senderDiv);
+
+    const textDiv = document.createElement("div");
+    textDiv.className = "msg-body-content";
+    if (type === "bot") {
+      textDiv.innerHTML = formatAIResponse(text);
+    } else {
+      textDiv.innerText = text;
+    }
+    msgDiv.appendChild(textDiv);
+
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  // Yazıyor Göstergesi (Loading Indicator)
+  let typingIndicator = null;
+  function showTypingIndicator() {
+    if (typingIndicator) return;
+    typingIndicator = document.createElement("div");
+    typingIndicator.className = "ai-msg bot";
+    typingIndicator.innerHTML = `
+      <div class="msg-sender">AI Sihirbazı</div>
+      <div class="ai-typing-indicator">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+    chatMessages.appendChild(typingIndicator);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function hideTypingIndicator() {
+    if (typingIndicator && typingIndicator.parentNode) {
+      typingIndicator.parentNode.removeChild(typingIndicator);
+      typingIndicator = null;
+    }
+  }
+
+  // Markdown Kod Yapısı ve Formatlayıcı
+  function formatAIResponse(text) {
+    let safeText = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    const codeBlockRegex = /```(?:[a-zA-Z]*)\n([\s\S]*?)```/g;
+    safeText = safeText.replace(codeBlockRegex, function (match, code) {
+      const uniqueId = "ai-code-" + Math.random().toString(36).substr(2, 9);
+      const encodedCode = btoa(unescape(encodeURIComponent(code.trim())));
+      return `
+        <pre><code id="${uniqueId}">${code.trim()}</code></pre>
+        <div class="ai-code-actions">
+          <button class="btn-ai-action" onclick="copyAICode('${uniqueId}')">Kopyala</button>
+          <button class="btn-ai-action" onclick="injectAICode('${encodedCode}')">Editöre Aktar</button>
+        </div>
+      `;
+    });
+
+    safeText = safeText.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
+    return safeText;
+  }
+
+  // Global Metotlar (HTML onclick çağrıları için)
+  window.copyAICode = function (id) {
+    const codeEl = document.getElementById(id);
+    if (codeEl) {
+      navigator.clipboard.writeText(codeEl.innerText).then(() => {
+        logToConsole("Kod panoya kopyalandı.", "system-msg");
+      });
+    }
+  };
+
+  window.injectAICode = function (encodedCode) {
+    try {
+      const code = decodeURIComponent(escape(atob(encodedCode)));
+      editor.insert(code);
+      logToConsole("Yapay zeka kodu imleç konumuna enjekte edildi.", "system-msg");
+    } catch (e) {
+      console.error("Kod enjeksiyonu hatası:", e);
+    }
+  };
+
+  // Gemini API İsteği Gönderimi
+  async function askGemini(promptText) {
+    const savedKey = localStorage.getItem("clomosy_gemini_api_key");
+    if (!savedKey) {
+      return "API Anahtarı bulunamadı.";
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${savedKey}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: promptText,
+                  },
+                ],
+              },
+            ],
+            systemInstruction: {
+              parts: [
+                {
+                  text: `Sen Clomosy AI Kod Asistanısın. Clomosy projelerinde Pascal/Delphi tabanlı TRObject yazılım dili kullanılır. Yanıtlarında aşağıdaki Clomosy TRObject kurallarına, sözdizimi (syntax) yapısına ve kütüphane metotlarına kesinlikle uymalısın:
+
+1. ATAMA & KARŞILAŞTIRMA OPERATÖRLERİ:
+   - Değer atamalarında kesinlikle '=' kullanılır (Pascal'daki ':=' kullanılmaz). Örn: 'Sayi = 10;'
+   - Eşitlik karşılaştırmasında '==' kullanılır (Pascal'daki '=' kullanılmaz). Eşitsizlik için '<>' kullanılır. Örn: 'if (Sayi == 10) {}'
+
+2. MANTIKSAL OPERATÖRLER:
+   - VE için '&&', VEYA için '||', DEĞİL için 'not' kullanılır. Örn: 'if (HavaGuzel && islerBitti) {}'
+
+3. KOD BLOKLARI & YAZIM SIRASI:
+   - Blok başlangıç ve bitişi için 'begin'-'end' kelimeleri yerine '{' ve '}' süslü parantezleri kullanılır.
+   - En alttaki ana program yürütme bloğu da '{' ve '}' arasındadır.
+   - Bildirim sırası: const -> var -> function -> void (procedures) -> ana program bloğu şeklinde olmalıdır.
+
+4. PROSEDÜR & FONKSİYON TANIMLARI:
+   - Prosedür tanımları 'void ProsedurAdi;' şeklindedir (Örn: parametreli ise 'void OnClickBtn(Sender: TObject);').
+   - Fonksiyon tanımları 'function FonksiyonAdi: GeriDonusTuru;' şeklindedir.
+   - Başlık satırının sonuna mutlaka noktalı virgül ';' konur. Hemen altına 'var' değişken bloğu ve sonrasında '{' ve '}' bloğu gelir.
+   - Örnek:
+     void OnClickBtn;
+     var
+       sayi: Integer;
+     {
+       sayi = 10;
+       if (sayi == 10) { ShowMessage('Doğru!'); }
+     }
+
+5. FORM YÖNETİMİ & BİLEŞEN OLUŞTURMA:
+   - Form tanımlama: 'Form1 = TclForm.Create(Self);'
+   - Başlık değiştirme: 'Form1.clSetCaption('Başlık');'
+   - Form çalıştırma: 'Form1.Run;'
+   - Arka Plan Rengi (Renk, Gradyan): 'Form1.SetFormColor('#6F0278','',clGNone);' (Düz) veya 'Form1.SetFormColor('#F00','#00F',clGVertical);' (Gradyan)
+   - Resim yükleme/indirerek set etme: 'Form1.AddAssetFromUrl('https://.../img.png'); Form1.SetFormBGImage('img.png');'
+   - Menü butonlarını gizleme: 'Form1.BtnFormMenu.Visible = False; Form1.BtnGoBack.Visible = False;'
+   - Bileşen ekleme: 'Btn = Form1.AddNewButton(Parent, 'BtnName', 'Caption');', 'Lbl = Form1.AddNewLabel(Parent, 'LblName', 'Text');', 'Edt = Form1.AddNewEdit(Parent, 'EdtName', 'Placeholder');', 'Memo = Form1.AddNewMemo(Parent, 'MemoName', 'Text');'
+   - Olaylar (Events): 'Form1.AddNewEvent(Component, EventType, 'ProcedureName');' (Örn: 'tbeOnClick', 'tbeOnChange', 'tbeOnTimer')
+
+6. RESPONSIVE TASARIM:
+   - Ekran genişliği: 'Form.clWidth', ekran yüksekliği: 'Form.clHeight'
+   - Genişlik yüzdesi: 'Btn.Width = Form.clWidth * 0.75;'
+   - Yatay ortalama: 'Btn.Left = (Form.clWidth - Btn.Width) / 2;'
+
+7. PRO BİLEŞENLER STİLLERİ (SetupComponent & clProSettings):
+   - JSON stil yapılandırma: 'clComponent.SetupComponent(Btn, \'{"Align":"Center","RoundHeight":15,"Width":300,"TextSize":30}\');'
+   - Programatik stil atama:
+     Btn.clProSettings.RoundHeight = 15;
+     Btn.clProSettings.RoundWidth = 15;
+     Btn.clProSettings.IsFill = True;
+     Btn.clProSettings.IsRound = True;
+     Btn.clProSettings.BackgroundColor = clAlphaColor.clHexToColor('#ebe6e6');
+     Btn.clProSettings.BorderColor = clAlphaColor.clHexToColor('#d1d1d1');
+     Btn.clProSettings.BorderWidth = 2;
+     Btn.clProSettings.FontSize = 14;
+     Btn.SetclProSettings(Btn.clProSettings);
+
+8. JSON & REST API & SQLite:
+   - JSON Nokta Notasyonu: 'fiyat = Clomosy.CLParseJSON(jsonVeri, \'products.0.price\');'
+   - REST API:
+     var rest: TCLRest;
+     {
+       rest = TCLRest.Create; rest.BaseURL = 'url'; rest.Method = rmPOST;
+       rest.AddBody('{"k":"v"}','application/json'); rest.Execute;
+       var yanit = rest.Response;
+     }
+   - SQLite bağlantı ve sorgulama:
+     Clomosy.DBSQLiteConnect(Clomosy.AppFilesPath+'db.db3','');
+     Clomosy.DBSQLiteQuery.Sql.Text = 'CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, name TEXT)';
+     Clomosy.DBSQLiteQuery.OpenOrExecute;
+
+9. DİL & YANIT BİÇİMİ:
+   - Türkçe cevap vermelisin. Kod örneklerini mutlaka \`\`\`pascal ... \`\`\` bloğunda sunmalısın.`
+                },
+              ],
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "HTTP İstek Hatası");
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Gemini API Hatası:", error);
+      const errMsg = error.message ? error.message.toLowerCase() : "";
+      
+      if (errMsg.includes("quota") || errMsg.includes("limit") || errMsg.includes("rate") || errMsg.includes("exceeded")) {
+        return "Oops! Galiba Gemini ücretsiz katman kullanım kotanız veya istek limitiniz doldu. 🔮 Lütfen kısa bir süre (yaklaşık 1 dakika) bekleyip tekrar deneyin ya da farklı bir API anahtarı girin.";
+      }
+      
+      if (errMsg.includes("key") || errMsg.includes("invalid") || errMsg.includes("not found") || errMsg.includes("api_key")) {
+        return "Girdiğiniz Gemini API anahtarı geçersiz veya hatalı görünüyor. 🔑 Lütfen alt kısımdaki 'Değiştir' linkine basarak anahtarınızı kontrol edin ve doğru girdiğinizden emin olun.";
+      }
+      
+      return "Oops! Sunucuyla bağlantı kurulurken beklenmedik bir durum oluştu. 📡 Lütfen internet bağlantınızı kontrol edip kısa bir süre sonra tekrar deneyin.";
+    }
+  }
+
+  // Mesaj Gönderme Tetikleyicisi
+  async function handleSend() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    chatInput.value = "";
+    appendMessage("Siz", text, "user");
+    showTypingIndicator();
+
+    const response = await askGemini(text);
+    hideTypingIndicator();
+    appendMessage("AI Sihirbazı", response, "bot");
+  }
+
+  if (sendMsgBtn) {
+    sendMsgBtn.addEventListener("click", handleSend);
+  }
+
+  if (chatInput) {
+    chatInput.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+  }
+
+  // Preset Eventleri
+  if (presetExplain) {
+    presetExplain.addEventListener("click", async function () {
+      const code = editor.getValue();
+      if (!code.trim()) {
+        appendMessage("AI Sihirbazı", "Editörde açıklanacak kod bulunamadı.", "bot");
+        return;
+      }
+      appendMessage("Siz", "Bu kodu açıklar mısın?", "user");
+      showTypingIndicator();
+      const response = await askGemini(`Lütfen şu Clomosy TRObject kodunu adım adım açıkla:\n\n\`\`\`pascal\n${code}\n\`\`\``);
+      hideTypingIndicator();
+      appendMessage("AI Sihirbazı", response, "bot");
+    });
+  }
+
+  if (presetFindBugs) {
+    presetFindBugs.addEventListener("click", async function () {
+      const code = editor.getValue();
+      if (!code.trim()) {
+        appendMessage("AI Sihirbazı", "Editörde analiz edilecek kod bulunamadı.", "bot");
+        return;
+      }
+      appendMessage("Siz", "Koddaki hataları ayıkla.", "user");
+      showTypingIndicator();
+      const response = await askGemini(`Şu Clomosy kodundaki olası sözdizimi (syntax) veya mantıksal hataları bul, açıkla ve düzeltilmiş temiz kodu ver:\n\n\`\`\`pascal\n${code}\n\`\`\``);
+      hideTypingIndicator();
+      appendMessage("AI Sihirbazı", response, "bot");
+    });
+  }
+
+  if (presetOptimize) {
+    presetOptimize.addEventListener("click", async function () {
+      const code = editor.getValue();
+      if (!code.trim()) {
+        appendMessage("AI Sihirbazı", "Editörde optimize edilecek kod bulunamadı.", "bot");
+        return;
+      }
+      appendMessage("Siz", "Bu kodu optimize et.", "user");
+      showTypingIndicator();
+      const response = await askGemini(`Şu Clomosy kodunu performans ve okunabilirlik açısından optimize et, yaptığın değişiklikleri açıkla ve kod bloğunu ver:\n\n\`\`\`pascal\n${code}\n\`\`\``);
+      hideTypingIndicator();
+      appendMessage("AI Sihirbazı", response, "bot");
+    });
+  }
+
+  if (presetDocHelp) {
+    presetDocHelp.addEventListener("click", async function () {
+      let selected = editor.getSelectedText().trim();
+      if (!selected) {
+        const pos = editor.getCursorPosition();
+        selected = editor.session.getWordRange(pos.row, pos.column);
+        selected = editor.session.getTextRange(selected).trim();
+      }
+      if (!selected) {
+        appendMessage("AI Sihirbazı", "Yardım almak istediğiniz metodu/sınıfı editörde seçin veya imleci üzerine getirin.", "bot");
+        return;
+      }
+      appendMessage("Siz", `"${selected}" kullanım yardımı`, "user");
+      showTypingIndicator();
+      const response = await askGemini(`Clomosy programlamada "${selected}" bileşeni, metodu veya sabiti ne işe yarar? Nasıl kullanılır? Kısa bir kod örneğiyle açıkla.`);
+      hideTypingIndicator();
+      appendMessage("AI Sihirbazı", response, "bot");
+    });
+  }
+
+  // İlk tetiklemeler
+  startWizardSpeech();
+})();
